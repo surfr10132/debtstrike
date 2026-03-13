@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { getSession } from '@/lib/session-store';
 import { generateDocx } from '@/lib/generate-docx';
 import { generatePdf } from '@/lib/generate-pdf';
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     if (sessionId === 'test_session_bypass' && TEST_MODE) {
       console.log('[TEST MODE] Skipping Stripe payment verification');
     } else {
-      const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
+      const checkoutSession = await getStripe().checkout.sessions.retrieve(sessionId);
       if (checkoutSession.payment_status !== 'paid') {
         return NextResponse.json(
           { error: 'Payment not confirmed' },
