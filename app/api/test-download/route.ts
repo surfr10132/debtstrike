@@ -5,8 +5,23 @@ import { SessionPayload } from '@/lib/types';
 
 // TEST ONLY — bypasses Stripe, remove before going live
 export async function POST(request: Request) {
+  // SECURITY: Disable in production
+  if (process.env.NODE_ENV === 'production') {
+    return NextResponse.json(
+      { error: 'Test download endpoint is disabled in production.' },
+      { status: 403 }
+    );
+  }
+
   try {
     const { format } = (await request.json()) as { format: 'docx' | 'pdf' };
+
+    if (!format || (format !== 'docx' && format !== 'pdf')) {
+      return NextResponse.json(
+        { error: 'Invalid format. Must be docx or pdf.' },
+        { status: 400 }
+      );
+    }
 
     const testPayload: SessionPayload = {
       extractedData: {
@@ -16,6 +31,13 @@ export async function POST(request: Request) {
         amountClaimed: '$3,247.56',
         originalCreditor: 'Capital One Bank, N.A.',
         isThirdPartyCollector: true,
+        collectorTypeConfidence: 'high',
+        recipientName: 'John Smith',
+        recipientStreetAddress: '123 Main Street',
+        recipientCity: 'Los Angeles',
+        recipientState: 'CA',
+        recipientZip: '90012',
+        recipientPhone: '(213) 555-1234',
       },
       userInfo: {
         fullName: 'John Smith',
@@ -24,6 +46,8 @@ export async function POST(request: Request) {
         state: 'CA',
         zip: '90001',
         phone: '(310) 555-1234',
+        ssnLast4: '5678',
+        dob: '1985-03-15',
       },
       generatedLetter: {
         letterText: `John Smith
@@ -70,6 +94,13 @@ John Smith`,
 
     if (format === 'docx') {
       const buffer = await generateDocx(testPayload);
+      if (!buffer || buffer.length === 0) {
+        console.error('DOCX generation returned empty buffer in test endpoint');
+        return NextResponse.json(
+          { error: 'Failed to generate test document - empty content.' },
+          { status: 500 }
+        );
+      }
       return new NextResponse(Buffer.from(buffer), {
         headers: {
           'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -78,6 +109,13 @@ John Smith`,
       });
     } else {
       const pdfBytes = await generatePdf(testPayload);
+      if (!pdfBytes || pdfBytes.length === 0) {
+        console.error('PDF generation returned empty buffer in test endpoint');
+        return NextResponse.json(
+          { error: 'Failed to generate test document - empty content.' },
+          { status: 500 }
+        );
+      }
       return new NextResponse(Buffer.from(pdfBytes), {
         headers: {
           'Content-Type': 'application/pdf',
