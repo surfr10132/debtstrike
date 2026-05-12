@@ -3,54 +3,195 @@ import Link from "next/link";
 export default function Home() {
   return (
     <div className="min-h-screen bg-background grid-bg scanlines">
+      {/* Organization JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": "DebtStrike.io",
+            "url": "https://debtstrike.io",
+            "logo": "https://debtstrike.io/og-image.png",
+            "sameAs": [
+              "https://tiktok.com/@debtstrike.io",
+              "https://instagram.com/debtstrike.io"
+            ]
+          })
+        }}
+      />
+      {/* Product JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Product",
+            "name": "Debt Validation & Cease and Desist Letter",
+            "description": "AI-generated personalized debt validation and cease & desist letter citing FDCPA and California RFDCPA. Download as PDF and Word document.",
+            "brand": { "@type": "Brand", "name": "DebtStrike.io" },
+            "offers": [
+              {
+                "@type": "Offer",
+                "name": "Download Only",
+                "price": "20.00",
+                "priceCurrency": "USD",
+                "availability": "https://schema.org/InStock",
+                "url": "https://debtstrike.io/generate"
+              },
+              {
+                "@type": "Offer",
+                "name": "Download + USPS Certified Mail",
+                "price": "32.00",
+                "priceCurrency": "USD",
+                "availability": "https://schema.org/InStock",
+                "url": "https://debtstrike.io/generate"
+              }
+            ]
+          })
+        }}
+      />
+      {/* HowTo JSON-LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "HowTo",
+            "name": "How to Send a Debt Validation Letter to Stop Debt Collectors",
+            "description": "Upload a debt collection letter, generate a personalized debt validation and cease & desist response, and mail it via USPS Certified Mail to legally force collectors to prove the debt and stop calling you.",
+            "step": [
+              {
+                "@type": "HowToStep",
+                "position": 1,
+                "name": "Upload the collection letter",
+                "text": "Upload a photo, PDF, or paste the text of the debt collection letter you received. Our AI extracts the collector name, address, account number, and amount claimed."
+              },
+              {
+                "@type": "HowToStep",
+                "position": 2,
+                "name": "Generate your personalized response",
+                "text": "We generate a unique debt validation demand and cease & desist letter citing the FDCPA and California RFDCPA, written in plain language as if you wrote it yourself."
+              },
+              {
+                "@type": "HowToStep",
+                "position": 3,
+                "name": "Mail it via USPS Certified Mail",
+                "text": "Download your letter and mail it yourself via USPS Certified Mail, or pay $30.99 and we print, mail, and track it for you. Once the collector receives it, they must stop calling and prove the debt within 30 days."
+              }
+            ],
+            "totalTime": "PT2M",
+            "estimatedCost": {
+              "@type": "MonetaryAmount",
+              "currency": "USD",
+              "value": "20"
+            }
+          })
+        }}
+      />
       {/* Navigation */}
-      <nav className="relative z-10 flex items-center justify-between px-6 py-4 border-b border-border">
-        <div className="font-mono text-accent font-bold text-xl tracking-widest">
+      <nav className="relative z-10 flex items-center justify-between px-4 sm:px-6 py-4 border-b border-border">
+        <div className="font-mono text-accent font-bold text-lg sm:text-xl tracking-widest">
           DEBTSTRIKE<span className="text-accent-red">.IO</span>
         </div>
-        <Link
-          href="/generate"
-          className="btn-tactical px-4 py-2 text-sm"
-        >
-          Launch Strike
-        </Link>
+        <div className="flex items-center gap-4 sm:gap-6">
+          <Link href="/resources" className="text-foreground hover:text-accent transition-colors text-sm sm:text-base">
+            Resources
+          </Link>
+          <Link
+            href="/generate"
+            className="btn-tactical px-4 py-2 text-sm"
+          >
+            Get Started
+          </Link>
+        </div>
       </nav>
 
       {/* Hero Section */}
-      <section className="relative z-10 flex flex-col items-center justify-center px-6 py-24 md:py-32 text-center">
+      <section className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-6 py-16 md:py-32 text-center">
         <div className="mb-6 font-mono text-sm tracking-[0.3em] text-muted uppercase">
           // Tactical Debt Defense System
         </div>
 
-        <h1 className="font-mono text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-2">
+        <div className="font-mono text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-2" aria-hidden="true">
           <span className="text-accent">DEBT</span>
           <span className="text-accent-red">STRIKE</span>
+        </div>
+
+        <h1 className="mt-6 text-xl md:text-2xl font-bold text-foreground max-w-2xl">
+          Stop Debt Collectors &amp; Fix Your Credit Report
         </h1>
 
-        <p className="mt-6 text-xl md:text-2xl font-bold text-foreground max-w-2xl">
-          Stop the calls. Demand proof. Take control.
+        <p className="mt-4 text-lg md:text-xl text-foreground/80 max-w-xl leading-relaxed">
+          Fight back with AI-powered letters that cite your federal rights.
+          Stop collector calls with a Debt Validation &amp; Cease &amp; Desist letter,
+          or dispute negative items on your credit report with bureau-specific FCRA letters.
         </p>
 
-        <p className="mt-4 text-base md:text-lg text-muted max-w-xl leading-relaxed">
-          Upload your debt collection letter. We generate a legally-referenced
-          Debt Validation and Cease & Desist letter that forces collectors to
-          prove the debt and communicate in writing only.
-        </p>
-
-        <Link
-          href="/generate"
-          className="btn-tactical mt-10 px-10 py-4 text-lg pulse-glow"
-        >
-          Launch Your Strike - $20
-        </Link>
+        <div className="mt-10 flex flex-col sm:flex-row gap-4 items-center">
+          <Link
+            href="/generate"
+            className="btn-tactical px-10 py-4 text-lg pulse-glow"
+          >
+            Launch Your Debt Strike - $20
+          </Link>
+          <span className="text-muted font-mono text-sm">or</span>
+          <Link
+            href="#free"
+            className="font-mono text-accent text-sm border border-accent/40 px-6 py-4 hover:bg-accent/10 transition-colors tracking-wider"
+          >
+            GET IT FREE
+          </Link>
+        </div>
 
         <div className="mt-4 font-mono text-xs text-muted">
-          One-time payment. No subscriptions. No accounts.
+          $20 one-time — or free when you share on social media.
+        </div>
+
+        {/* Trust Signals */}
+        <div className="mt-8 flex flex-wrap justify-center gap-4 text-sm">
+          <div className="flex items-center gap-2 text-muted">
+            <span>Payments secured by</span>
+            <span className="text-accent font-mono">Stripe</span>
+          </div>
+          <div className="flex items-center gap-2 text-muted">
+            <span>Based on your federal</span>
+            <span className="text-accent font-mono">FDCPA</span>
+            <span>rights</span>
+          </div>
+          <div className="text-muted">
+            <span className="text-accent font-mono">No account</span>
+            <span>needed</span>
+          </div>
+        </div>
+      </section>
+
+      {/* Social Proof Stats */}
+      <section className="relative z-10 px-4 sm:px-6 py-8 border-t border-b border-border">
+        <div className="max-w-4xl mx-auto grid grid-cols-3 gap-8 text-center">
+          <div>
+            <div className="font-mono text-3xl font-bold text-accent mb-2">
+              500+
+            </div>
+            <div className="text-muted text-sm">Letters Generated</div>
+          </div>
+          <div>
+            <div className="font-mono text-3xl font-bold text-accent mb-2">
+              All 50
+            </div>
+            <div className="text-muted text-sm">States Covered</div>
+          </div>
+          <div>
+            <div className="font-mono text-3xl font-bold text-accent mb-2">
+              60s
+            </div>
+            <div className="text-muted text-sm">Avg. Generation Time</div>
+          </div>
         </div>
       </section>
 
       {/* How It Works */}
-      <section className="relative z-10 px-6 py-20 border-t border-border">
+      <section className="relative z-10 px-4 sm:px-6 py-16 sm:py-20 border-t border-border">
         <div className="max-w-4xl mx-auto">
           <h2 className="font-mono text-2xl md:text-3xl font-bold text-center mb-16">
             <span className="text-accent">MISSION</span> BRIEFING
@@ -62,8 +203,8 @@ export default function Home() {
               <div className="font-mono text-accent text-sm mb-3 tracking-widest">
                 PHASE 01
               </div>
-              <h3 className="font-bold text-lg mb-2">Upload Their Letter</h3>
-              <p className="text-muted text-sm leading-relaxed">
+              <h3 className="font-bold text-xl mb-2">Upload Their Letter</h3>
+              <p className="text-muted text-base leading-relaxed">
                 Upload a PDF, snap a photo, or paste the text of the debt
                 collection letter you received. Our system scans and extracts
                 every detail.
@@ -75,8 +216,8 @@ export default function Home() {
               <div className="font-mono text-accent text-sm mb-3 tracking-widest">
                 PHASE 02
               </div>
-              <h3 className="font-bold text-lg mb-2">We Build Your Response</h3>
-              <p className="text-muted text-sm leading-relaxed">
+              <h3 className="font-bold text-xl mb-2">We Build Your Response</h3>
+              <p className="text-muted text-base leading-relaxed">
                 Our system generates a unique Debt Validation + Cease & Desist
                 letter tailored to your situation. Every letter is one-of-a-kind.
               </p>
@@ -87,8 +228,8 @@ export default function Home() {
               <div className="font-mono text-accent text-sm mb-3 tracking-widest">
                 PHASE 03
               </div>
-              <h3 className="font-bold text-lg mb-2">Download & Send</h3>
-              <p className="text-muted text-sm leading-relaxed">
+              <h3 className="font-bold text-xl mb-2">Download & Send</h3>
+              <p className="text-muted text-base leading-relaxed">
                 Download your letter as a Word doc or PDF. Print it, sign it,
                 and send it via Certified Mail with Return Receipt Requested.
               </p>
@@ -98,7 +239,7 @@ export default function Home() {
       </section>
 
       {/* What Your Letter Does */}
-      <section className="relative z-10 px-6 py-20 border-t border-border">
+      <section className="relative z-10 px-4 sm:px-6 py-16 sm:py-20 border-t border-border">
         <div className="max-w-3xl mx-auto">
           <h2 className="font-mono text-2xl md:text-3xl font-bold text-center mb-12">
             <span className="text-accent-red">YOUR LETTER</span> DEMANDS
@@ -117,69 +258,175 @@ export default function Home() {
             ].map((item, i) => (
               <div
                 key={i}
-                className="flex items-start gap-3 p-3 border border-border bg-surface"
+                className="flex items-start gap-4 p-4 border border-border bg-surface"
               >
                 <span className="font-mono text-accent text-sm mt-0.5">
                   [{String(i + 1).padStart(2, "0")}]
                 </span>
-                <span className="text-sm">{item}</span>
+                <span className="text-base text-foreground font-medium">{item}</span>
               </div>
             ))}
           </div>
 
           <div className="mt-8 p-4 border border-accent/30 bg-accent/5 text-center">
-            <p className="font-mono text-accent text-sm">
-              References federal law (FDCPA) and California state law (RFDCPA)
+            <p className="font-mono text-accent text-base">
+              References federal law (FDCPA) and California state law (RFDCPA).
             </p>
           </div>
         </div>
       </section>
 
-      {/* Pricing */}
-      <section className="relative z-10 px-6 py-20 border-t border-border">
-        <div className="max-w-md mx-auto text-center">
-          <h2 className="font-mono text-2xl md:text-3xl font-bold mb-8">
+      {/* Pricing — Two Options */}
+      <section className="relative z-10 px-4 sm:px-6 py-16 sm:py-20 border-t border-border">
+        <div className="max-w-3xl mx-auto text-center">
+          <h2 className="font-mono text-2xl md:text-3xl font-bold mb-4">
             <span className="text-accent">COST</span> OF OPERATION
           </h2>
+          <p className="text-muted text-base mb-10">Two ways to get your letter. Same letter either way.</p>
 
-          <div className="border border-accent p-8 glow-green bg-surface">
-            <div className="font-mono text-5xl font-bold text-accent mb-2">
-              $20
+          <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
+            {/* Option A: Pay */}
+            <div className="border border-accent p-8 glow-green bg-surface">
+              <div className="font-mono text-xs text-accent tracking-wider mb-4">OPTION A</div>
+              <div className="font-mono text-5xl font-bold text-accent mb-2">
+                $20
+              </div>
+              <div className="text-muted text-base mb-6">One-time. Instant download.</div>
+              <ul className="text-left text-base space-y-3 mb-8">
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> Word document (.docx)
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> PDF with signature
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> Unique letter every time
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> No subscription needed
+                </li>
+              </ul>
+              <Link
+                href="/generate"
+                className="btn-tactical block w-full py-3 text-center"
+              >
+                Get Started
+              </Link>
             </div>
-            <div className="text-muted text-sm mb-6">One-time. Per letter.</div>
-            <ul className="text-left text-sm space-y-2 mb-8">
-              <li className="flex gap-2">
-                <span className="text-accent">+</span> Word document (.docx) for
-                printing & signing
-              </li>
-              <li className="flex gap-2">
-                <span className="text-accent">+</span> PDF with signature ready
-                to send
-              </li>
-              <li className="flex gap-2">
-                <span className="text-accent">+</span> Unique letter every time
-              </li>
-              <li className="flex gap-2">
-                <span className="text-accent">+</span> No subscription, no
-                account needed
-              </li>
-            </ul>
+
+            {/* Option B: Share */}
+            <div className="border border-border p-8 bg-surface hover:border-accent/40 transition-colors" id="free">
+              <div className="font-mono text-xs text-accent tracking-wider mb-4">OPTION B</div>
+              <div className="font-mono text-5xl font-bold text-accent mb-2">
+                FREE
+              </div>
+              <div className="text-muted text-base mb-6">Share on social media.</div>
+              <ul className="text-left text-base space-y-3 mb-8">
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> Same exact letter
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> Same DOCX + PDF downloads
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> Post about DebtStrike
+                </li>
+                <li className="flex gap-2">
+                  <span className="text-accent">+</span> Upload a screenshot to unlock
+                </li>
+              </ul>
+              <Link
+                href="/generate"
+                className="btn-tactical block w-full py-3 text-center"
+              >
+                Get Started Free
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How to Get It Free — Walkthrough */}
+      <section className="relative z-10 px-4 sm:px-6 py-16 sm:py-20 border-t border-border">
+        <div className="max-w-3xl mx-auto">
+          <h2 className="font-mono text-2xl md:text-3xl font-bold text-center mb-4">
+            <span className="text-accent">HOW TO GET</span> YOUR LETTER FREE
+          </h2>
+          <p className="text-muted text-base text-center mb-12">
+            Help someone else find out they don&apos;t have to take it from debt collectors. That&apos;s it.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            <div className="border border-border p-6 bg-surface">
+              <div className="font-mono text-accent text-sm mb-3 tracking-widest">STEP 01</div>
+              <h3 className="font-bold text-xl mb-2">Generate Your Letter</h3>
+              <p className="text-muted text-base leading-relaxed">
+                Upload your debt collection letter and fill in your info. We generate your letter for free — no credit card needed to start.
+              </p>
+            </div>
+
+            <div className="border border-border p-6 bg-surface">
+              <div className="font-mono text-accent text-sm mb-3 tracking-widest">STEP 02</div>
+              <h3 className="font-bold text-xl mb-2">Post on Social Media</h3>
+              <p className="text-muted text-base leading-relaxed">
+                Share a post about DebtStrike on Instagram, TikTok, Twitter, or Facebook. We give you suggested captions you can copy and paste.
+              </p>
+            </div>
+
+            <div className="border border-border p-6 bg-surface">
+              <div className="font-mono text-accent text-sm mb-3 tracking-widest">STEP 03</div>
+              <h3 className="font-bold text-xl mb-2">Upload Screenshot</h3>
+              <p className="text-muted text-base leading-relaxed">
+                Take a screenshot of your post and upload it. Our AI verifies it mentions DebtStrike, and your letter unlocks instantly for download.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-8 p-4 border border-accent/30 bg-accent/5 text-center">
+            <p className="text-base text-foreground/80">
+              <span className="text-accent font-mono font-bold">WHY WE DO THIS:</span>{" "}
+              Most people getting harassed by debt collectors don&apos;t know they have legal rights. Your post might be the reason someone else finds out. That&apos;s worth more than $20.
+            </p>
+          </div>
+
+          <div className="mt-8 text-center">
             <Link
               href="/generate"
-              className="btn-tactical block w-full py-3 text-center"
+              className="btn-tactical px-10 py-4 text-lg"
             >
-              Get Started
+              Start Now — Choose Pay or Share Later
             </Link>
           </div>
         </div>
       </section>
 
       {/* Footer / Disclaimer */}
-      <footer className="relative z-10 px-6 py-12 border-t border-border">
+      <footer className="relative z-10 px-4 sm:px-6 py-12 border-t border-border">
         <div className="max-w-3xl mx-auto text-center">
           <div className="font-mono text-accent text-sm mb-4 tracking-widest">
             DEBTSTRIKE<span className="text-accent-red">.IO</span>
           </div>
+
+          {/* Social Media Links */}
+          <div className="flex justify-center gap-4 mb-8">
+            <Link
+              href="https://tiktok.com/@debtstrike.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-sm text-muted hover:text-accent transition-colors"
+            >
+              TikTok
+            </Link>
+            <Link
+              href="https://instagram.com/debtstrike.io"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-sm text-muted hover:text-accent transition-colors"
+            >
+              Instagram
+            </Link>
+          </div>
+
           <div className="text-muted text-xs leading-relaxed space-y-2">
             <p>
               <strong>Legal Disclaimer:</strong> DebtStrike.io is NOT a law firm
@@ -195,6 +442,19 @@ export default function Home() {
               &copy; {new Date().getFullYear()} DebtStrike.io. All rights
               reserved.
             </p>
+          </div>
+
+          {/* Legal Links */}
+          <div className="flex justify-center gap-4 mt-6 text-muted text-xs">
+            <Link href="/terms" className="underline hover:text-accent transition-colors">
+              Terms
+            </Link>
+            <Link href="/privacy" className="underline hover:text-accent transition-colors">
+              Privacy
+            </Link>
+            <Link href="/refund-policy" className="underline hover:text-accent transition-colors">
+              Refund Policy
+            </Link>
           </div>
         </div>
       </footer>
