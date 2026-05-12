@@ -310,7 +310,8 @@ ${data.collectorName}
 ${data.collectorAddress}
 
 ABOUT THIS DEBT:
-Account number: ${data.accountNumber || "whatever they referenced in their letter"}
+Account number(s): ${data.accountNumber || "whatever they referenced in their letter"}
+${data.accountNumber && data.accountNumber.includes("\n") ? "NOTE: The person has MULTIPLE accounts with this same collector. The letter must reference ALL of these account numbers — in the subject line and in the body." : ""}
 Amount they say is owed: ${data.amountClaimed || "whatever they claimed"}
 ${originalCreditorLine}
 Is this a third-party collector (not the original creditor)? ${data.isThirdPartyCollector ? "Yes" : "No"}
@@ -328,7 +329,7 @@ LETTER FORMAT:
 
 [Collector name and address — normal case, not all caps]
 
-Re: Account #${data.accountNumber || "[number]"}${data.originalCreditor ? ` / ${data.originalCreditor}` : ""} — All accounts associated with SSN ending in ${user.ssnLast4}, DOB ${user.dob}, name ${user.fullName}
+Re: ${data.accountNumber ? (data.accountNumber.includes("\n") ? "Account #" + data.accountNumber.split("\n").map((a: string) => a.trim()).filter(Boolean).join(", #") : "Account #" + data.accountNumber) : "All accounts"}${data.originalCreditor ? ` / ${data.originalCreditor}` : ""} — and any/all other accounts associated with SSN ending in ${user.ssnLast4}, DOB ${user.dob}, name ${user.fullName}
 
 [Greeting — match the voice. Could be "To Whom It May Concern," or just the company name, or "Hey —" for casual]
 

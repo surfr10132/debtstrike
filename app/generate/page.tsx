@@ -672,7 +672,7 @@ export default function GeneratePage() {
                 <textarea
                   value={pastedText}
                   onChange={(e) => setPastedText(e.target.value)}
-                  placeholder={"Paste your collection letter here...\n\nOr type the details manually:\n\nCreditor/Collector name: \nAccount number: \nCreditor address: \nAmount owed (if known): "}
+                  placeholder={"Paste your collection letter here...\n\nOr type the details manually:\n\nCreditor/Collector name: \nAccount number(s): (list each on its own line if more than one)\nCreditor address: \nAmount owed (if known): "}
                   className="input-tactical w-full h-48 sm:h-64 p-4 text-sm resize-none"
                 />
               </div>
@@ -793,35 +793,36 @@ export default function GeneratePage() {
                 )}
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block font-mono text-xs text-accent mb-1 tracking-wider">
-                    ACCOUNT / REFERENCE #
-                  </label>
-                  <input
-                    type="text"
-                    value={extractedData.accountNumber}
-                    onChange={(e) =>
-                      setExtractedData({ ...extractedData, accountNumber: e.target.value })
-                    }
-                    placeholder="From the letter or your credit report"
-                    className="input-tactical w-full p-3 text-sm"
-                  />
+              <div>
+                <label className="block font-mono text-xs text-accent mb-1 tracking-wider">
+                  ACCOUNT / REFERENCE # (one per line if multiple)
+                </label>
+                <textarea
+                  value={extractedData.accountNumber}
+                  onChange={(e) =>
+                    setExtractedData({ ...extractedData, accountNumber: e.target.value })
+                  }
+                  placeholder={"e.g.\n6274-8839-2201\n6274-8839-2202"}
+                  className="input-tactical w-full p-3 text-sm h-20 resize-none"
+                />
+                <div className="text-muted text-xs mt-1">
+                  Have multiple accounts with this same collector? Enter each account number on its own line. Your letter will reference all of them.
                 </div>
-                <div>
-                  <label className="block font-mono text-xs text-accent mb-1 tracking-wider">
-                    AMOUNT CLAIMED ($)
-                  </label>
-                  <input
-                    type="text"
-                    value={extractedData.amountClaimed}
-                    onChange={(e) =>
-                      setExtractedData({ ...extractedData, amountClaimed: e.target.value })
-                    }
-                    placeholder="e.g. $3,247.56"
-                    className="input-tactical w-full p-3 text-sm"
-                  />
-                </div>
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs text-accent mb-1 tracking-wider">
+                  AMOUNT CLAIMED ($)
+                </label>
+                <input
+                  type="text"
+                  value={extractedData.amountClaimed}
+                  onChange={(e) =>
+                    setExtractedData({ ...extractedData, amountClaimed: e.target.value })
+                  }
+                  placeholder="e.g. $3,247.56 (total across all accounts, or leave blank if unsure)"
+                  className="input-tactical w-full p-3 text-sm"
+                />
               </div>
 
               <div>
