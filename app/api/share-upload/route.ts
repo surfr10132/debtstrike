@@ -47,7 +47,7 @@ export async function POST(request: Request) {
 
     // Use Claude vision to verify the screenshot
     const verificationResponse = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
+      model: "claude-sonnet-4-5",
       max_tokens: 300,
       messages: [
         {

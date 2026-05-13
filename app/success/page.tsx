@@ -1,23 +1,190 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { Suspense } from "react";
+import { Suspense, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+
+const LOCALSTORAGE_KEY = "debtstrike_payload";
 
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const payloadId = searchParams.get("payload_id");
+  const wasMailed = searchParams.get("mailed") === "1";
+  const [sessionValid, setSessionValid] = useState<boolean | null>(null);
+  const [mailLoading, setMailLoading] = useState(false);
+  const [downloading, setDownloading] = useState<string | null>(null);
+  const [mailResult, setMailResult] = useState<{
+    success: boolean;
+    trackingNumber?: string;
+    error?: string;
+  } | null>(null);
 
-  if (!sessionId || !payloadId) {
+  // Try to get saved payload from localStorage
+  const getSavedPayload = useCallback(() => {
+    try {
+      const saved = localStorage.getItem(LOCALSTORAGE_KEY);
+      if (saved) return JSON.parse(saved);
+    } catch {
+      // ignore
+    }
+    return null;
+  }, []);
+
+  useEffect(() => {
+    const validateSession = async () => {
+      if (!sessionId || !payloadId) {
+        setSessionValid(false);
+        return;
+      }
+
+      // For share_unlock with localStorage payload, skip server validation
+      if (sessionId === "share_unlock") {
+        const saved = getSavedPayload();
+        if (saved?.generatedLetter?.letterText) {
+          setSessionValid(true);
+          return;
+        }
+      }
+
+      try {
+        const response = await fetch(
+          `/api/validate-session?payload_id=${payloadId}&session_id=${sessionId}`
+        );
+        if (response.ok) {
+          setSessionValid(true);
+        } else {
+          // Last resort: check localStorage
+          const saved = getSavedPayload();
+          setSessionValid(!!saved?.generatedLetter?.letterText);
+        }
+      } catch (error) {
+        console.error("Session validation error:", error);
+        const saved = getSavedPayload();
+        setSessionValid(!!saved?.generatedLetter?.letterText);
+      }
+    };
+
+    validateSession();
+  }, [sessionId, payloadId, getSavedPayload]);
+
+  // If this was a "mail for me" checkout, trigger the mailing
+  useEffect(() => {
+    if (!wasMailed || !sessionValid || !payloadId || !sessionId) return;
+    if (mailResult || mailLoading) return;
+
+    const triggerMail = async () => {
+      setMailLoading(true);
+      try {
+        const response = await fetch("/api/send-mail", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ payloadId, sessionId }),
+        });
+        const data = await response.json();
+        if (response.ok && data.success) {
+          setMailResult({
+            success: true,
+            trackingNumber: data.trackingNumber,
+          });
+        } else {
+          setMailResult({
+            success: false,
+            error: data.error || "Failed to send letter.",
+          });
+        }
+      } catch {
+        setMailResult({
+          success: false,
+          error: "Network error. Please contact support@debtstrike.io.",
+        });
+      } finally {
+        setMailLoading(false);
+      }
+    };
+
+    triggerMail();
+  }, [wasMailed, sessionValid, payloadId, sessionId, mailResult, mailLoading]);
+
+  /**
+   * Download handler: tries POST with localStorage payload first,
+   * falls back to GET (which pulls from Stripe metadata or session store).
+   */
+  const handleDownload = useCallback(async (format: "docx" | "pdf") => {
+    setDownloading(format);
+    try {
+      let response: Response | null = null;
+
+      // Try 1: POST with localStorage payload
+      const savedPayload = getSavedPayload();
+      if (savedPayload?.generatedLetter?.letterText) {
+        response = await fetch("/api/download", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            payload: savedPayload,
+            format,
+            sessionId,
+          }),
+        });
+      }
+
+      // Try 2: GET (Stripe metadata or session store)
+      if (!response || !response.ok) {
+        response = await fetch(
+          `/api/download?payload_id=${payloadId}&format=${format}&session_id=${sessionId}`
+        );
+      }
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Download failed");
+      }
+
+      // Trigger browser download from the response blob
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `DebtStrike-Letter.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Download error:", err);
+      alert(
+        "Download failed. Please try again or email support@debtstrike.io for help."
+      );
+    } finally {
+      setDownloading(null);
+    }
+  }, [getSavedPayload, payloadId, sessionId]);
+
+  if (sessionValid === null) {
     return (
       <div className="min-h-screen bg-background grid-bg flex items-center justify-center">
-        <div className="text-center">
+        <div className="spinner-tactical" />
+      </div>
+    );
+  }
+
+  if (!sessionId || !payloadId || !sessionValid) {
+    return (
+      <div className="min-h-screen bg-background grid-bg flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-6">
           <div className="font-mono text-accent-red text-2xl font-bold mb-4">
-            INVALID ACCESS
+            SESSION EXPIRED
           </div>
+          <p className="text-muted text-sm mb-4">
+            Your download session has expired or could not be found. This can happen if too much time passed after payment.
+          </p>
           <p className="text-muted text-sm mb-6">
-            This page requires a valid payment session.
+            If you already paid, email us at{" "}
+            <a href="mailto:support@debtstrike.io" className="text-accent underline">
+              support@debtstrike.io
+            </a>{" "}
+            with your payment confirmation and we&apos;ll send your letter directly.
           </p>
           <Link href="/generate" className="btn-tactical px-8 py-3">
             START OVER
@@ -26,9 +193,6 @@ function SuccessContent() {
       </div>
     );
   }
-
-  const downloadUrl = (format: "docx" | "pdf") =>
-    `/api/download?payloadId=${payloadId}&format=${format}&session_id=${sessionId}`;
 
   return (
     <div className="min-h-screen bg-background grid-bg">
@@ -43,79 +207,239 @@ function SuccessContent() {
       </nav>
 
       <div className="max-w-2xl mx-auto px-6 py-16 text-center">
-        {/* Success Header */}
-        <div className="mb-2 font-mono text-sm tracking-[0.3em] text-accent-dim uppercase">
-          // Operation Complete
+        {/* Send Animation */}
+        <div className="send-animation mb-8">
+          <div className="envelope-wrap mx-auto mb-8" style={{ width: 120, height: 80, position: 'relative' }}>
+            <div className="send-letter-paper" />
+            <div className="send-envelope">
+              <div className="send-envelope-flap" />
+            </div>
+          </div>
+          <div className="send-reveal">
+            <div className="send-checkmark mx-auto mb-5">
+              <span className="text-accent text-2xl font-bold">&#10003;</span>
+            </div>
+            <h1 className="font-mono text-4xl md:text-5xl font-bold mb-2">
+              <span className="text-accent">MISSION</span>{" "}
+              <span className="text-accent-red">ACCOMPLISHED</span>
+            </h1>
+            <p className="text-muted text-lg mb-2">
+              {wasMailed
+                ? "Your letter is being printed and mailed."
+                : "Your letter is ready for download."}
+            </p>
+          </div>
         </div>
-        <h1 className="font-mono text-4xl md:text-5xl font-bold mb-4">
-          <span className="text-accent">MISSION</span>{" "}
-          <span className="text-accent-red">ACCOMPLISHED</span>
-        </h1>
-        <p className="text-muted text-lg mb-12">
-          Your letter has been generated and is ready for download.
-        </p>
+
+        {/* Mailing Status (if mail-for-me was selected) */}
+        {wasMailed && (
+          <div className="border border-border bg-surface mb-10">
+            <div className="px-5 py-3 border-b border-border font-mono text-xs text-accent tracking-wider font-bold">
+              CERTIFIED MAIL STATUS
+            </div>
+            <div className="p-5">
+              {mailLoading && (
+                <div className="flex items-center justify-center gap-3">
+                  <div className="spinner-tactical" style={{ width: 16, height: 16 }} />
+                  <span className="font-mono text-sm text-muted">Submitting to USPS...</span>
+                </div>
+              )}
+              {mailResult?.success && (
+                <div className="text-left">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-accent text-xl">&#10003;</span>
+                    <span className="font-mono text-accent font-bold text-sm">LETTER SUBMITTED FOR MAILING</span>
+                  </div>
+                  {mailResult.trackingNumber && (
+                    <div className="border border-border bg-background p-4 mb-3">
+                      <div className="font-mono text-[10px] text-muted tracking-widest mb-1">USPS TRACKING NUMBER</div>
+                      <div className="font-mono text-accent text-lg font-bold tracking-wider">
+                        {mailResult.trackingNumber}
+                      </div>
+                      <a
+                        href={`https://tools.usps.com/go/TrackConfirmAction?tLabels=${mailResult.trackingNumber}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-accent underline mt-1 inline-block"
+                      >
+                        Track on USPS.com &rarr;
+                      </a>
+                    </div>
+                  )}
+                  <div className="border-2 border-[var(--accent-green)] bg-[rgba(0,255,65,0.04)] p-4 rounded">
+                    <p className="text-sm text-foreground leading-relaxed mb-2">
+                      <strong>Save your tracking number.</strong> This is your proof that the collector received your letter.
+                      If they keep calling after delivery, that tracking number proves every call is a <span className="text-accent font-bold">$1,000 federal violation</span>.
+                    </p>
+                    <p className="text-sm text-accent font-mono font-bold">
+                      Screenshot this page or write down the tracking number now.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {mailResult && !mailResult.success && (
+                <div className="text-left">
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="text-accent-red text-xl">&#10007;</span>
+                    <span className="font-mono text-accent-red font-bold text-sm">MAILING ERROR</span>
+                  </div>
+                  <p className="text-sm text-muted mb-3">{mailResult.error}</p>
+                  <p className="text-sm text-muted">
+                    Don&apos;t worry — your payment is safe. Email{" "}
+                    <a href="mailto:support@debtstrike.io" className="text-accent underline">
+                      support@debtstrike.io
+                    </a>{" "}
+                    and we&apos;ll send your letter manually.
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Download Buttons */}
-        <div className="grid md:grid-cols-2 gap-6 mb-12">
-          <a
-            href={downloadUrl("docx")}
-            className="btn-tactical p-6 text-center block glow-green-hover"
+        <div className="grid md:grid-cols-2 gap-6 mb-10">
+          <button
+            onClick={() => handleDownload("docx")}
+            disabled={!!downloading}
+            className="btn-tactical p-6 text-center block glow-green-hover w-full"
           >
-            <div className="font-mono text-2xl mb-2">DOCX</div>
-            <div className="text-xs text-muted normal-case tracking-normal font-normal">
-              Word document - print and sign by hand
-            </div>
-          </a>
-          <a
-            href={downloadUrl("pdf")}
-            className="btn-tactical p-6 text-center block glow-green-hover"
+            {downloading === "docx" ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="spinner-tactical" style={{ width: 16, height: 16 }} />
+                <span className="font-mono text-sm">GENERATING...</span>
+              </div>
+            ) : (
+              <>
+                <div className="font-mono text-2xl mb-2">DOCX</div>
+                <div className="text-xs text-muted normal-case tracking-normal font-normal">
+                  Word document &mdash; print and sign by hand
+                </div>
+              </>
+            )}
+          </button>
+          <button
+            onClick={() => handleDownload("pdf")}
+            disabled={!!downloading}
+            className="btn-tactical p-6 text-center block glow-green-hover w-full"
           >
-            <div className="font-mono text-2xl mb-2">PDF</div>
-            <div className="text-xs text-muted normal-case tracking-normal font-normal">
-              PDF with handwriting-style signature
-            </div>
-          </a>
+            {downloading === "pdf" ? (
+              <div className="flex items-center justify-center gap-2">
+                <div className="spinner-tactical" style={{ width: 16, height: 16 }} />
+                <span className="font-mono text-sm">GENERATING...</span>
+              </div>
+            ) : (
+              <>
+                <div className="font-mono text-2xl mb-2">PDF</div>
+                <div className="text-xs text-muted normal-case tracking-normal font-normal">
+                  PDF with handwriting-style signature
+                </div>
+              </>
+            )}
+          </button>
         </div>
 
-        {/* Instructions */}
-        <div className="border border-border p-6 bg-surface text-left mb-8">
-          <div className="font-mono text-accent text-sm mb-4 tracking-wider">
-            NEXT STEPS:
+        {/* WHAT HAPPENS NEXT — Timeline */}
+        <div className="border border-border bg-surface text-left mb-8">
+          <div className="px-5 py-3 border-b border-border font-mono text-xs text-accent tracking-wider font-bold">
+            WHAT HAPPENS NEXT
           </div>
-          <div className="space-y-3 text-sm">
-            <div className="flex gap-3">
-              <span className="font-mono text-accent">[01]</span>
-              <span>
-                <strong>Print</strong> the Word document and{" "}
-                <strong>sign it by hand</strong> in the blank signature space
-              </span>
+          <div className="p-5 relative">
+            <div className="absolute left-[39px] top-5 bottom-5 w-0.5 bg-[var(--border-color)]" />
+
+            {/* Step 1: CERTIFIED MAIL */}
+            <div className="flex gap-4 mb-6 relative">
+              <div className="w-5 h-5 rounded-full bg-[var(--accent-green)] flex-shrink-0 z-10 flex items-center justify-center">
+                <span className="text-[var(--background)] text-[10px] font-bold">1</span>
+              </div>
+              <div className="flex-1">
+                <div className="font-mono text-[10px] text-accent tracking-widest mb-1">
+                  {wasMailed ? "IN PROGRESS" : "RIGHT NOW"}
+                </div>
+                {wasMailed ? (
+                  <>
+                    <div className="text-base font-bold text-foreground mb-2">Your letter is being printed and mailed</div>
+                    <div className="border-2 border-[var(--accent-green)] bg-[rgba(0,255,65,0.04)] p-4 rounded mb-2">
+                      <p className="text-sm text-foreground leading-relaxed mb-2">
+                        We&apos;re handling everything — your letter will be printed and sent via <strong>USPS Certified Mail with Electronic Return Receipt</strong>.
+                      </p>
+                      <p className="text-sm text-foreground leading-relaxed">
+                        <strong>Save your tracking number above.</strong> When the collector receives your letter, the tracking will update to &quot;Delivered.&quot; That&apos;s your proof. If they keep calling after that, every call is a <span className="text-accent font-bold">$1,000 federal violation</span>.
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted">
+                      Letters are typically mailed within 1 business day and delivered within 3-7 business days.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-base font-bold text-foreground mb-2">Print and mail your letter via USPS Certified Mail</div>
+                    <div className="border-2 border-[var(--accent-red)] bg-[rgba(255,0,0,0.06)] p-4 rounded mb-2">
+                      <div className="font-mono text-xs text-accent-red tracking-wider font-bold mb-2">&#9888; CRITICAL — DO NOT SKIP THIS</div>
+                      <p className="text-sm text-foreground leading-relaxed mb-2">
+                        You <strong>must</strong> send this letter via <strong>USPS Certified Mail with Return Receipt Requested</strong>.
+                        This is the only way to prove the collector received your letter.
+                      </p>
+                      <p className="text-sm text-foreground leading-relaxed mb-2">
+                        <strong>Save the receipt with the tracking number.</strong> This is your proof.
+                        If they keep calling after receiving your letter, that tracking receipt is what proves
+                        every call is a $1,000 federal violation. Without it, you have no paper trail.
+                      </p>
+                      <p className="text-sm text-accent font-mono font-bold">
+                        No tracking receipt = no proof = no case. Keep it safe.
+                      </p>
+                    </div>
+                    <div className="text-xs text-muted">
+                      Cost: ~$4-5 at any USPS post office. Ask for &quot;Certified Mail with Return Receipt.&quot;
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="font-mono text-accent">[02]</span>
-              <span>
-                Send the letter via <strong>USPS Certified Mail</strong> with{" "}
-                <strong>Return Receipt Requested</strong>
-              </span>
+
+            {/* Step 2 */}
+            <div className="flex gap-4 mb-6 relative">
+              <div className="w-5 h-5 rounded-full border-2 border-[var(--accent-green)] flex-shrink-0 z-10 bg-[var(--background)]" />
+              <div className="flex-1">
+                <div className="font-mono text-[10px] text-accent tracking-widest mb-1">WITHIN 5 DAYS</div>
+                <div className="text-base font-bold text-foreground mb-1">All collection calls must stop</div>
+                <p className="text-sm text-muted leading-relaxed">
+                  Once they receive your letter, they are legally required to stop calling you.
+                  Every call after that is a separate FDCPA violation worth <span className="text-accent font-bold">$1,000 in statutory damages</span>.
+                </p>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="font-mono text-accent">[03]</span>
-              <span>
-                <strong>Keep copies</strong> of the letter and the certified
-                mail receipt for your records
-              </span>
+
+            {/* Step 3 */}
+            <div className="flex gap-4 mb-6 relative">
+              <div className="w-5 h-5 rounded-full border-2 border-[var(--border-color)] flex-shrink-0 z-10 bg-[var(--background)]" />
+              <div className="flex-1">
+                <div className="font-mono text-[10px] text-muted tracking-widest mb-1">30 DAYS</div>
+                <div className="text-base font-bold text-foreground mb-1">Collector must respond with proof</div>
+                <p className="text-sm text-muted leading-relaxed">
+                  They have 30 days to send you documentation proving the debt is valid.
+                  If they can&apos;t prove it, they must stop all collection activity and remove it from your credit report.
+                </p>
+              </div>
             </div>
-            <div className="flex gap-3">
-              <span className="font-mono text-accent">[04]</span>
-              <span>
-                The collector has <strong>30 days</strong> to respond with
-                validation of the debt
-              </span>
+
+            {/* Step 4 */}
+            <div className="flex gap-4 relative">
+              <div className="w-5 h-5 rounded-full border-2 border-[var(--border-color)] flex-shrink-0 z-10 bg-[var(--background)]" />
+              <div className="flex-1">
+                <div className="font-mono text-[10px] text-muted tracking-widest mb-1">AFTER 30 DAYS</div>
+                <div className="text-base font-bold text-foreground mb-1">Check your results</div>
+                <p className="text-sm text-muted leading-relaxed">
+                  If they didn&apos;t respond, the debt is effectively dead. If they keep contacting you,
+                  you may have grounds for a lawsuit &mdash; contact a consumer protection attorney (most take these cases for free on contingency).
+                </p>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Disclaimer */}
-        <div className="text-muted text-xs p-3 border border-border mb-8">
+        <div className="text-muted text-xs p-3 border border-border mb-8 text-left">
           <strong>Disclaimer:</strong> DebtStrike.io is not a law firm and does
           not provide legal advice. This letter is based on your rights under the
           FDCPA and California RFDCPA. If the collector continues to contact you

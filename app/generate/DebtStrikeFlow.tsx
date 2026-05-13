@@ -186,6 +186,19 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
     setError(null);
     setLoadingMessage("CONNECTING TO PAYMENT...");
 
+    // Save payload to localStorage as backup — Vercel serverless can lose in-memory sessions
+    try {
+      const payloadForStorage = {
+        uploadType,
+        extractedData,
+        userInfo,
+        generatedLetter,
+      };
+      localStorage.setItem("debtstrike_payload", JSON.stringify(payloadForStorage));
+    } catch {
+      // localStorage may be unavailable — continue anyway, Stripe metadata is the primary backup
+    }
+
     try {
       const res = await fetch("/api/create-checkout", {
         method: "POST",
@@ -246,6 +259,19 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
 
       if (!res.ok) {
         throw new Error(data.error || "Verification failed");
+      }
+
+      // Save payload to localStorage for download on success page
+      try {
+        const payloadForStorage = {
+          uploadType,
+          extractedData,
+          userInfo,
+          generatedLetter,
+        };
+        localStorage.setItem("debtstrike_payload", JSON.stringify(payloadForStorage));
+      } catch {
+        // continue
       }
 
       setShareUnlocked(true);
@@ -1416,24 +1442,66 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
                 FREE DOWNLOAD — THANKS FOR SHARING
               </div>
               <div className="grid sm:grid-cols-2 gap-4">
-                <a
-                  href={shareDownloadUrl.replace('/success?', '/api/download?format=docx&')}
-                  className="btn-tactical p-4 text-center block"
+                <button
+                  onClick={async () => {
+                    try {
+                      const payload = { uploadType, extractedData, userInfo, generatedLetter };
+                      const res = await fetch("/api/download", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ payload, format: "docx", sessionId: "share_unlock" }),
+                      });
+                      if (!res.ok) throw new Error("Download failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "DebtStrike-Letter.docx";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      setError("Download failed. Please try again.");
+                    }
+                  }}
+                  className="btn-tactical p-4 text-center block w-full"
                 >
                   <div className="font-mono text-xl mb-1">DOCX</div>
                   <div className="text-xs text-muted normal-case tracking-normal font-normal">
                     Word doc &mdash; print &amp; sign
                   </div>
-                </a>
-                <a
-                  href={shareDownloadUrl.replace('/success?', '/api/download?format=pdf&')}
-                  className="btn-tactical p-4 text-center block"
+                </button>
+                <button
+                  onClick={async () => {
+                    try {
+                      const payload = { uploadType, extractedData, userInfo, generatedLetter };
+                      const res = await fetch("/api/download", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ payload, format: "pdf", sessionId: "share_unlock" }),
+                      });
+                      if (!res.ok) throw new Error("Download failed");
+                      const blob = await res.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "DebtStrike-Letter.pdf";
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                    } catch {
+                      setError("Download failed. Please try again.");
+                    }
+                  }}
+                  className="btn-tactical p-4 text-center block w-full"
                 >
                   <div className="font-mono text-xl mb-1">PDF</div>
                   <div className="text-xs text-muted normal-case tracking-normal font-normal">
                     PDF with signature
                   </div>
-                </a>
+                </button>
               </div>
             </div>
 
