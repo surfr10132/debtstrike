@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import anthropic from "@/lib/claude";
 import { CreditReportItem, UserInfo, DisputeLetter } from "@/lib/types";
+import { sendLetterNotification } from "@/lib/emails";
 
 export const maxDuration = 120; // Allow up to 120s for generating multiple letters
 
@@ -315,6 +316,17 @@ export async function POST(request: Request) {
     );
 
     const disputeLetters: DisputeLetter[] = await Promise.all(letterPromises);
+
+    // Fire-and-forget notification — don't block the response
+    sendLetterNotification({
+      letterType: "Credit Strike",
+      consumerName: userInfo.fullName,
+      consumerCity: userInfo.city,
+      consumerState: userInfo.state,
+      collectorOrBureaus: bureaus.join(", "),
+      itemCount: items.length,
+      timestamp: new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }),
+    }).catch(() => {});
 
     return NextResponse.json({ disputeLetters });
   } catch (error) {

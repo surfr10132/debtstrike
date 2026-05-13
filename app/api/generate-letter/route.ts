@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getAnthropic } from '@/lib/claude';
 import { buildLetterGenerationPrompt } from '@/lib/claude-prompts';
 import { ExtractedDebtData, UserInfo } from '@/lib/types';
+import { sendLetterNotification } from '@/lib/emails';
 
 export async function POST(request: Request) {
   try {
@@ -89,6 +90,16 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    // Fire-and-forget notification — don't block the response
+    sendLetterNotification({
+      letterType: "Debt Strike",
+      consumerName: userInfo.fullName,
+      consumerCity: userInfo.city,
+      consumerState: userInfo.state,
+      collectorOrBureaus: extractedData.collectorName,
+      timestamp: new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }),
+    }).catch(() => {});
 
     return NextResponse.json({ letterText, date: todayDate });
   } catch (error) {

@@ -4,6 +4,7 @@ import { generatePdf } from "./generate-pdf";
 import { generateDocx } from "./generate-docx";
 
 const FROM_EMAIL = "DebtStrike.io <noreply@debtstrike.io>";
+const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || "jason@robenzlaw.com";
 
 function checkEmail() {
   if (!isEmailConfigured) {
@@ -248,4 +249,86 @@ export async function sendMailingConfirmationEmail(
   console.log(
     `[EMAIL] Mailing confirmation sent to ${customerEmail} — tracking: ${trackingNumber}`
   );
+}
+
+/**
+ * Internal notification: sent to Jason when any letter is generated.
+ * Fire-and-forget — never blocks the user-facing response.
+ */
+export interface NotificationPayload {
+  letterType: "Debt Strike" | "Credit Strike";
+  consumerName: string;
+  consumerCity: string;
+  consumerState: string;
+  collectorOrBureaus: string;
+  itemCount?: number;
+  timestamp: string;
+}
+
+export async function sendLetterNotification(
+  payload: NotificationPayload
+): Promise<void> {
+  if (!checkEmail()) return;
+
+  const {
+    letterType,
+    consumerName,
+    consumerCity,
+    consumerState,
+    collectorOrBureaus,
+    itemCount,
+    timestamp,
+  } = payload;
+
+  const subjectLine =
+    letterType === "Debt Strike"
+      ? `New Debt Strike letter generated — ${consumerName} vs ${collectorOrBureaus}`
+      : `New Credit Strike letters generated — ${consumerName} (${itemCount} items)`;
+
+  try {
+    await resend.emails.send({
+      from: FROM_EMAIL,
+      to: NOTIFICATION_EMAIL,
+      subject: subjectLine,
+      html: `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0 auto; color: #e0e0e0; background: #0a0a0a; padding: 24px;">
+  <div style="text-align: center; margin-bottom: 24px;">
+    <span style="font-family: monospace; font-size: 18px; font-weight: bold; letter-spacing: 3px; color: #00ff41;">DEBTSTRIKE</span><span style="font-family: monospace; font-size: 18px; font-weight: bold; color: #ff3333;">.IO</span>
+    <span style="font-family: monospace; font-size: 12px; color: #888; display: block; margin-top: 4px;">LETTER GENERATED</span>
+  </div>
+
+  <div style="border: 1px solid #222; padding: 20px; margin-bottom: 16px;">
+    <table style="width: 100%; font-size: 14px; border-collapse: collapse;">
+      <tr>
+        <td style="padding: 6px 0; color: #888; width: 120px;">Type</td>
+        <td style="padding: 6px 0; color: ${letterType === "Debt Strike" ? "#ff3333" : "#00ff41"}; font-weight: bold;">${letterType}</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 0; color: #888;">Consumer</td>
+        <td style="padding: 6px 0; color: #fff;">${consumerName}</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 0; color: #888;">Location</td>
+        <td style="padding: 6px 0; color: #fff;">${consumerCity}, ${consumerState}</td>
+      </tr>
+      <tr>
+        <td style="padding: 6px 0; color: #888;">${letterType === "Debt Strike" ? "Collector" : "Bureaus"}</td>
+        <td style="padding: 6px 0; color: #fff;">${collectorOrBureaus}</td>
+      </tr>
+      ${itemCount ? `<tr><td style="padding: 6px 0; color: #888;">Items disputed</td><td style="padding: 6px 0; color: #fff;">${itemCount}</td></tr>` : ""}
+      <tr>
+        <td style="padding: 6px 0; color: #888;">Generated</td>
+        <td style="padding: 6px 0; color: #fff;">${timestamp}</td>
+      </tr>
+    </table>
+  </div>
+
+  <p style="font-size: 12px; color: #555; text-align: center; margin: 0;">This is an automated notification. The consumer has not paid yet — this fires at letter generation.</p>
+</div>
+      `,
+    });
+    console.log(`[EMAIL] Notification sent to ${NOTIFICATION_EMAIL} — ${letterType} for ${consumerName}`);
+  } catch (err) {
+    console.error("[EMAIL] Failed to send notification (non-blocking):", err);
+  }
 }
