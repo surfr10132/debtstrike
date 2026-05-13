@@ -1,6 +1,10 @@
 import Anthropic from "@anthropic-ai/sdk";
 
-// Let the SDK read ANTHROPIC_API_KEY from process.env automatically
-const anthropic = new Anthropic();
+let _anthropic: Anthropic | null = null;
 
-export default anthropic;
+export function getAnthropic(): Anthropic {
+  if (!_anthropic) {
+    _anthropic = new Anthropic();
+  }
+  return _anthropic;
+}

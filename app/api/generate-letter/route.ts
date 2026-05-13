@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import anthropic from '@/lib/claude';
+import { getAnthropic } from '@/lib/claude';
 import { buildLetterGenerationPrompt } from '@/lib/claude-prompts';
 import { ExtractedDebtData, UserInfo } from '@/lib/types';
 
@@ -64,6 +64,7 @@ export async function POST(request: Request) {
       todayDate
     );
 
+    const anthropic = getAnthropic();
     const message = await anthropic.messages.create({
       model: 'claude-sonnet-4-5',
       max_tokens: 4096,

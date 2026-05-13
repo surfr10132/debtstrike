@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import anthropic from '@/lib/claude';
+import { getAnthropic } from '@/lib/claude';
 import { EXTRACTION_SYSTEM_PROMPT } from '@/lib/claude-prompts';
 import { ExtractedDebtData } from '@/lib/types';
 
@@ -86,6 +86,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const uploadType = formData.get('type') as string;
 
+    const anthropic = getAnthropic();
     let content: Parameters<typeof anthropic.messages.create>[0]['messages'][0]['content'];
 
     if (uploadType === 'upload' || uploadType === 'pdf' || uploadType === 'image') {

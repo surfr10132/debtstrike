@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { getSession } from '@/lib/session-store';
 import { decodePayloadFromMetadata } from '@/lib/stripe-payload';
 import { generateDocx } from '@/lib/generate-docx';
@@ -67,7 +67,7 @@ export async function GET(request: Request) {
     } else if (sessionId === 'share_unlock') {
       console.log('[SHARE] Skipping Stripe — letter unlocked via social share');
     } else {
-      const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
+      const checkoutSession = await getStripe().checkout.sessions.retrieve(sessionId);
       if (checkoutSession.payment_status !== 'paid') {
         return NextResponse.json(
           { error: 'Payment not confirmed' },
