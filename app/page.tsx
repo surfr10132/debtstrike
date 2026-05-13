@@ -238,6 +238,131 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Comparison Table — Why DebtStrike */}
+      <section className="relative z-10 px-4 sm:px-6 py-16 sm:py-20 border-t border-border">
+        <div className="max-w-5xl mx-auto">
+          <h2 className="font-mono text-2xl md:text-3xl font-bold text-center mb-4">
+            <span className="text-accent">WHY</span> DEBTSTRIKE
+          </h2>
+          <p className="text-muted text-base text-center mb-12 max-w-2xl mx-auto">
+            You could hire a credit repair company, pay a lawyer, or spend hours doing it yourself. Or you could do it in 60 seconds for $20.
+          </p>
+
+          {/* Desktop Table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="text-left p-4 border border-border bg-surface font-mono text-sm text-muted tracking-wider"></th>
+                  <th className="p-4 border border-border bg-surface text-center">
+                    <div className="text-muted text-sm font-normal mb-1">Credit Repair</div>
+                    <div className="text-foreground font-bold">Company</div>
+                  </th>
+                  <th className="p-4 border border-border bg-surface text-center">
+                    <div className="text-muted text-sm font-normal mb-1">Consumer</div>
+                    <div className="text-foreground font-bold">Lawyer</div>
+                  </th>
+                  <th className="p-4 border border-border bg-surface text-center">
+                    <div className="text-muted text-sm font-normal mb-1">Do It</div>
+                    <div className="text-foreground font-bold">Yourself</div>
+                  </th>
+                  <th className="p-4 border border-accent bg-accent/10 text-center">
+                    <div className="text-accent text-sm font-normal mb-1 font-mono">DEBT</div>
+                    <div className="text-accent font-bold font-mono">STRIKE</div>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  {
+                    label: "Cost",
+                    values: ["$50–150/mo", "$200–400/hr", "Free", "$20 one-time"],
+                  },
+                  {
+                    label: "Time to letter",
+                    values: ["2–4 weeks", "1–2 weeks", "Hours of research", "60 seconds"],
+                  },
+                  {
+                    label: "Mails it for you",
+                    values: ["Sometimes", "No", "No", "Yes — certified"],
+                  },
+                  {
+                    label: "Cites specific statutes",
+                    values: ["Maybe", "Yes", "Probably wrong", "FDCPA + RFDCPA"],
+                  },
+                  {
+                    label: "Unique every time",
+                    values: ["Templates", "Yes", "N/A", "AI-generated, unique"],
+                  },
+                  {
+                    label: "Account required",
+                    values: ["Yes", "Yes", "No", "No"],
+                  },
+                  {
+                    label: "Credit report disputes",
+                    values: ["Extra fee", "Extra fee", "Hours per bureau", "Included — all 3 bureaus"],
+                  },
+                ].map((row, i) => (
+                  <tr key={i}>
+                    <td className="p-4 border border-border bg-surface font-mono text-sm text-muted">
+                      {row.label}
+                    </td>
+                    {row.values.map((val, j) => (
+                      <td
+                        key={j}
+                        className={`p-4 border text-center text-sm ${
+                          j === 3
+                            ? "border-accent bg-accent/5 text-accent font-bold"
+                            : "border-border text-foreground/70"
+                        }`}
+                      >
+                        {val}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-4">
+            {[
+              { label: "Cost", them: "$50–400/hr or monthly", us: "$20 one-time" },
+              { label: "Time to letter", them: "Days to weeks", us: "60 seconds" },
+              { label: "Mails it for you", them: "Usually no", us: "Yes — certified mail" },
+              { label: "Cites federal law", them: "Maybe", us: "FDCPA + RFDCPA" },
+              { label: "Unique letters", them: "Templates", us: "AI-generated, unique every time" },
+              { label: "Account required", them: "Yes", us: "No" },
+              { label: "Credit disputes", them: "Extra fees", us: "Included — all 3 bureaus" },
+            ].map((item, i) => (
+              <div key={i} className="border border-border bg-surface p-4">
+                <div className="font-mono text-xs text-muted tracking-wider mb-3">{item.label}</div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-xs text-muted mb-1">Others</div>
+                    <div className="text-sm text-foreground/60">{item.them}</div>
+                  </div>
+                  <div>
+                    <div className="text-xs text-accent mb-1 font-mono">DEBTSTRIKE</div>
+                    <div className="text-sm text-accent font-bold">{item.us}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 text-center">
+            <Link
+              href="/generate"
+              className="btn-tactical px-10 py-4 text-lg"
+            >
+              Get Started — $20 or Free
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* What Your Letter Does */}
       <section className="relative z-10 px-4 sm:px-6 py-16 sm:py-20 border-t border-border">
         <div className="max-w-3xl mx-auto">
