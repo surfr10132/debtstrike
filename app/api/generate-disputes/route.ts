@@ -263,7 +263,7 @@ The voice style and structural variation are your guide — follow them, but als
 Write the complete letter now.`;
 
   const response = await anthropic.messages.create({
-    model: "claude-sonnet-4-5-20250514",
+    model: "claude-sonnet-4-6",
     max_tokens: 4000,
     system: systemPrompt,
     messages: [
