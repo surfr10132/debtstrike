@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import anthropic from "@/lib/claude";
+import { getAnthropic } from "@/lib/claude";
 import { CreditReportItem } from "@/lib/types";
 
 export const maxDuration = 60; // Allow up to 60s for large reports
@@ -36,7 +36,7 @@ export async function POST(request: Request) {
 
     const isPdf = fileType === "application/pdf";
 
-    const response = await anthropic.messages.create({
+    const response = await getAnthropic().messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 8000,
       messages: [

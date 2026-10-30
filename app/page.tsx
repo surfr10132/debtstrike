@@ -42,7 +42,7 @@ export default function Home() {
               {
                 "@type": "Offer",
                 "name": "Download + USPS Certified Mail",
-                "price": "32.00",
+                "price": "30.99",
                 "priceCurrency": "USD",
                 "availability": "https://schema.org/InStock",
                 "url": "https://debtstrike.io/generate"
@@ -110,7 +110,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="relative z-10 flex flex-col items-center justify-center px-4 sm:px-6 py-16 md:py-32 text-center">
         <div className="mb-6 font-mono text-sm tracking-[0.3em] text-muted uppercase">
-          // Tactical Debt Defense System
+          {"// Tactical Debt Defense System"}
         </div>
 
         <div className="font-mono text-3xl sm:text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-2" aria-hidden="true">

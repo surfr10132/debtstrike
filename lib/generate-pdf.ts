@@ -1,5 +1,6 @@
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import { SessionPayload } from "./types";
+import { withStandardizedSignature } from "./letter-signature";
 
 // Word-wrap helper
 function wrapText(text: string, maxWidth: number, font: { widthOfTextAtSize: (t: string, s: number) => number }, size: number): string[] {
@@ -21,7 +22,10 @@ function wrapText(text: string, maxWidth: number, font: { widthOfTextAtSize: (t:
 }
 
 export async function generatePdf(payload: SessionPayload): Promise<Uint8Array> {
-  const { generatedLetter, userInfo } = payload;
+  const normalizedLetterText = withStandardizedSignature(
+    payload.generatedLetter.letterText,
+    payload.userInfo.fullName
+  );
 
   const pdfDoc = await PDFDocument.create();
   const font = await pdfDoc.embedFont(StandardFonts.TimesRoman);
@@ -47,17 +51,6 @@ export async function generatePdf(payload: SessionPayload): Promise<Uint8Array> 
     }
   }
 
-  function drawLine(text: string, isBold = false, indent = 0) {
-    checkNewPage();
-    page.drawText(text, {
-      x: marginLeft + indent,
-      y,
-      size: fontSize,
-      font: isBold ? fontBold : font,
-      color: rgb(0, 0, 0),
-    });
-    y -= lineHeight;
-  }
 
   function drawParagraph(text: string) {
     if (!text.trim()) {
@@ -84,22 +77,10 @@ export async function generatePdf(payload: SessionPayload): Promise<Uint8Array> 
   }
 
   // Draw the letter body
-  const lines = generatedLetter.letterText.split("\n");
+  const lines = normalizedLetterText.split("\n");
   for (const line of lines) {
     drawParagraph(line);
   }
-
-  // Signature area
-  y -= lineHeight;
-  checkNewPage();
-  page.drawLine({
-    start: { x: marginLeft, y },
-    end: { x: marginLeft + 220, y },
-    thickness: 0.5,
-    color: rgb(0, 0, 0),
-  });
-  y -= lineHeight;
-  drawLine(userInfo.fullName);
 
   return await pdfDoc.save();
 }

@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getStripe } from '@/lib/stripe';
 import { getSession } from '@/lib/session-store';
-import { decodePayloadFromMetadata } from '@/lib/stripe-payload';
 import { generateDocx } from '@/lib/generate-docx';
 import { generatePdf } from '@/lib/generate-pdf';
 import { SessionPayload } from '@/lib/types';
@@ -9,30 +8,11 @@ import { SessionPayload } from '@/lib/types';
 const TEST_MODE = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_your') || !process.env.STRIPE_SECRET_KEY;
 
 /**
- * Retrieve the payload using all available methods:
- * 1. Stripe session metadata (survives Vercel serverless)
- * 2. In-memory session store (works in local dev)
+ * Retrieve the payload from short-lived server session storage.
  */
 async function resolvePayload(
-  sessionId: string,
   payloadId: string
 ): Promise<SessionPayload | null> {
-  // Try Stripe metadata first (production-safe)
-  if (sessionId && sessionId !== 'test_session_bypass' && sessionId !== 'share_unlock') {
-    try {
-      const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
-      const fromStripe = decodePayloadFromMetadata(
-        checkoutSession.metadata as Record<string, string>
-      );
-      if (fromStripe?.generatedLetter?.letterText) {
-        return fromStripe;
-      }
-    } catch (err) {
-      console.warn('[download] Stripe metadata retrieval failed:', err);
-    }
-  }
-
-  // Fall back to session store (works in local dev or if Redis is configured)
   const fromStore = await getSession(payloadId);
   if (fromStore) return fromStore;
 
@@ -76,8 +56,8 @@ export async function GET(request: Request) {
       }
     }
 
-    // Resolve the payload from Stripe metadata or session store
-    const payload = await resolvePayload(sessionId, payloadId);
+    // Resolve payload from server session storage
+    const payload = await resolvePayload(payloadId);
     if (!payload) {
       return NextResponse.json(
         { error: 'Session expired. Please generate a new letter.' },
@@ -105,7 +85,7 @@ export async function GET(request: Request) {
 
 /**
  * POST handler: accepts payload directly in the request body.
- * Used by the success page when payload is available via localStorage.
+ * Used only for immediate share-unlock downloads.
  */
 export async function POST(request: Request) {
   try {
@@ -129,19 +109,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Verify payment (skip for test/share)
-    if (sessionId === 'test_session_bypass' && TEST_MODE) {
-      // ok
-    } else if (sessionId === 'share_unlock') {
-      // ok
-    } else {
-      const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
-      if (checkoutSession.payment_status !== 'paid') {
-        return NextResponse.json(
-          { error: 'Payment not confirmed' },
-          { status: 403 }
-        );
-      }
+    const isTestBypass = sessionId === 'test_session_bypass' && TEST_MODE;
+    const isShareUnlock = sessionId === 'share_unlock';
+    if (!isTestBypass && !isShareUnlock) {
+      return NextResponse.json(
+        { error: 'Direct payload download is only available for share unlock flow.' },
+        { status: 403 }
+      );
     }
 
     if (!payload.generatedLetter?.letterText) {

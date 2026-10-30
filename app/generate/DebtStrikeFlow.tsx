@@ -31,11 +31,13 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
     city: "",
     state: "CA",
     zip: "",
+    email: "",
     phone: "",
     ssnLast4: "",
     dob: "",
   });
   const [generatedLetter, setGeneratedLetter] = useState<GeneratedLetter | null>(null);
+  const [leadPayloadId, setLeadPayloadId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -50,13 +52,12 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
   const [shareMode, setShareMode] = useState(false);
   const [shareScreenshot, setShareScreenshot] = useState<File | null>(null);
   const [shareUnlocked, setShareUnlocked] = useState(false);
-  const [shareDownloadUrl, setShareDownloadUrl] = useState("");
   const [sharePlatform, setSharePlatform] = useState("");
   const [copiedCaption, setCopiedCaption] = useState<number | null>(null);
   const [letterApproved, setLetterApproved] = useState(false);
   const shareInputRef = useRef<HTMLInputElement>(null);
 
-  const revealExtractedFields = useCallback((data: ExtractedDebtData) => {
+  const revealExtractedFields = useCallback(() => {
     const fieldKeys = [
       "collectorName",
       "accountNumber",
@@ -86,6 +87,7 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
   async function handleExtract() {
     setIsLoading(true);
     setError(null);
+    setLeadPayloadId(null);
     setExtractionPhase("scanning");
     setLoadingMessage("SCANNING DOCUMENT...");
 
@@ -124,12 +126,13 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
         city: data.recipientCity || prev.city,
         state: data.recipientState || prev.state || "CA",
         zip: data.recipientZip || prev.zip,
+        email: prev.email,
         phone: data.recipientPhone || prev.phone,
         ssnLast4: prev.ssnLast4,
         dob: prev.dob,
       }));
 
-      revealExtractedFields(data);
+      revealExtractedFields();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
       setExtractionPhase(null);
@@ -156,7 +159,11 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
       const res = await fetch("/api/generate-letter", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ extractedData, userInfo }),
+        body: JSON.stringify({
+          extractedData,
+          userInfo,
+          existingPayloadId: leadPayloadId || undefined,
+        }),
       });
 
       if (!res.ok) {
@@ -164,8 +171,12 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
         throw new Error(data.error || "Letter generation failed");
       }
 
-      const data: GeneratedLetter = await res.json();
-      setGeneratedLetter(data);
+      const data = (await res.json()) as GeneratedLetter & { payloadId?: string };
+      setGeneratedLetter({
+        letterText: data.letterText,
+        date: data.date,
+      });
+      setLeadPayloadId(data.payloadId || null);
       setGenerationStep(5);
 
       await new Promise((resolve) => setTimeout(resolve, 800));
@@ -186,19 +197,6 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
     setError(null);
     setLoadingMessage("CONNECTING TO PAYMENT...");
 
-    // Save payload to localStorage as backup — Vercel serverless can lose in-memory sessions
-    try {
-      const payloadForStorage = {
-        uploadType,
-        extractedData,
-        userInfo,
-        generatedLetter,
-      };
-      localStorage.setItem("debtstrike_payload", JSON.stringify(payloadForStorage));
-    } catch {
-      // localStorage may be unavailable — continue anyway, Stripe metadata is the primary backup
-    }
-
     try {
       const res = await fetch("/api/create-checkout", {
         method: "POST",
@@ -211,6 +209,7 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
           },
           mailForMe,
           shareUnlocked: shareUnlocked || undefined,
+          existingPayloadId: leadPayloadId || undefined,
         }),
       });
 
@@ -249,6 +248,9 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
           generatedLetter,
         })
       );
+      if (leadPayloadId) {
+        formData.append("payload_id", leadPayloadId);
+      }
 
       const res = await fetch("/api/share-upload", {
         method: "POST",
@@ -261,22 +263,12 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
         throw new Error(data.error || "Verification failed");
       }
 
-      // Save payload to localStorage for download on success page
-      try {
-        const payloadForStorage = {
-          uploadType,
-          extractedData,
-          userInfo,
-          generatedLetter,
-        };
-        localStorage.setItem("debtstrike_payload", JSON.stringify(payloadForStorage));
-      } catch {
-        // continue
-      }
 
       setShareUnlocked(true);
-      setShareDownloadUrl(data.downloadUrl);
       setSharePlatform(data.platform || "social media");
+      if (data.payloadId) {
+        setLeadPayloadId(data.payloadId);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -336,6 +328,7 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
   const canExtract =
     (uploadType === "text" && pastedText.trim().length > 20) ||
     (uploadType === "upload" && file !== null);
+  const isValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userInfo.email.trim());
 
   const isValidPhone = /\d{10,}/.test(userInfo.phone.replace(/\D/g, ""));
   const isValidZip = /^\d{5}(-\d{4})?$/.test(userInfo.zip);
@@ -347,6 +340,7 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
     userInfo.streetAddress.trim() !== "" &&
     userInfo.city.trim() !== "" &&
     userInfo.state !== "" &&
+    isValidEmail &&
     isValidZip &&
     isValidPhone &&
     isValidSsn4 &&
@@ -983,6 +977,27 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
 
               <div>
                 <label className="block font-mono text-xs text-accent mb-1 tracking-wider">
+                  EMAIL ADDRESS <span className="text-accent-red">*</span>
+                </label>
+                <input
+                  type="email"
+                  value={userInfo.email}
+                  onChange={(e) => setUserInfo({ ...userInfo, email: e.target.value })}
+                  placeholder="you@example.com"
+                  className={`input-tactical w-full p-3 text-sm ${
+                    userInfo.email && !isValidEmail ? "border-accent-red" : ""
+                  }`}
+                  required
+                />
+                {userInfo.email && !isValidEmail && (
+                  <div className="text-accent-red text-xs mt-1">
+                    Enter a valid email address
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <label className="block font-mono text-xs text-accent mb-1 tracking-wider">
                   PHONE NUMBER <span className="text-accent-red">*</span>
                 </label>
                 <input
@@ -1002,10 +1017,11 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
                 )}
                 <div className="mt-2 p-3 border border-accent/30 bg-accent/5 text-sm text-foreground/80">
                   <span className="text-accent font-mono font-bold">WHY THIS MATTERS:</span>{" "}
-                  Your letter invokes FDCPA &sect; 1692c(c), ordering them to stop calling you. Once they
-                  receive it, every call to this number is a separate federal violation &mdash; <span className="text-accent">$1,000
-                  in statutory damages per call</span>, plus actual damages and attorney&apos;s fees. Your phone
-                  number on the letter creates the paper trail.
+                  Your letter invokes FDCPA &sect; 1692c(c), ordering them to stop calling you. If they
+                  keep calling after receiving it, those calls may violate federal law and can support{" "}
+                  <span className="text-accent">up to $1,000 in statutory damages per case</span>, plus
+                  actual damages and attorney&apos;s fees. Your phone number on the letter helps document
+                  the violations.
                 </div>
               </div>
 
@@ -1086,7 +1102,7 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
               <span className="text-accent">PHASE 04:</span> PREVIEW & PAY
             </h2>
             <p className="text-muted text-base mb-8">
-              Your letter has been generated. Preview it below, then pay to download.
+              Your letter has been generated. Review the full text below, then pay to download and mail.
             </p>
 
             <div className="border border-border mb-6">
@@ -1094,24 +1110,19 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
                 LETTER PREVIEW
               </div>
               <div
-                className="letter-preview whitespace-pre-wrap text-xs overflow-hidden p-4 bg-background relative letter-no-copy"
-                style={{ maxHeight: '180px' }}
+                className="letter-preview whitespace-pre-wrap text-sm overflow-auto p-4 bg-background relative letter-no-copy leading-relaxed"
+                style={{ maxHeight: '520px', fontFamily: 'Georgia, serif' }}
                 onContextMenu={(e) => e.preventDefault()}
               >
                 <div className="letter-watermark">
-                  {Array.from({ length: 8 }).map((_, i) => (
+                  {Array.from({ length: 12 }).map((_, i) => (
                     <div key={i} className="letter-watermark-text">DEBTSTRIKE.IO — PREVIEW ONLY</div>
                   ))}
                 </div>
-                {generatedLetter.letterText.slice(0, Math.floor(generatedLetter.letterText.length * 0.25))}
-                <div className="absolute bottom-0 left-0 right-0 h-28 pointer-events-none"
-                  style={{ background: 'linear-gradient(to bottom, transparent 0%, var(--background) 75%)' }}
-                />
-                <div className="absolute bottom-3 left-0 right-0 text-center pointer-events-none">
-                  <span className="font-mono text-[10px] text-muted tracking-widest">
-                    PAY TO VIEW FULL LETTER
-                  </span>
-                </div>
+                {generatedLetter.letterText}
+              </div>
+              <div className="px-4 py-3 border-t border-border bg-surface text-[11px] text-muted font-mono tracking-wide">
+                FULL TEXT PREVIEW SHOWN. DOWNLOAD FILES + MAIL SERVICE UNLOCK AFTER CHECKOUT.
               </div>
             </div>
 
@@ -1140,7 +1151,7 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
                     <span className="text-accent flex-shrink-0 mt-0.5">&#9632;</span>
                     <div>
                       <div className="text-foreground font-medium">Cease &amp; desist on phone calls</div>
-                      <div className="text-muted text-xs">FDCPA &sect; 1692c &mdash; $1,000 per call after receipt</div>
+                      <div className="text-muted text-xs">FDCPA &sect; 1692c &mdash; continued calls after receipt may violate federal law</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3 p-2.5 border border-border bg-background text-sm">
@@ -1567,7 +1578,8 @@ export default function DebtStrikeFlow({ onBack }: { onBack: () => void }) {
                     <div className="text-base font-bold text-foreground mb-1">All collection calls must stop</div>
                     <p className="text-sm text-muted leading-relaxed">
                       Once they receive your letter, they are legally required to stop calling you.
-                      Every call after that is a separate FDCPA violation worth <span className="text-accent font-bold">$1,000 in statutory damages</span>.
+                      Continued calls after that may violate federal law and can support{" "}
+                      <span className="text-accent font-bold">up to $1,000 in statutory damages per case</span>.
                     </p>
                   </div>
                 </div>

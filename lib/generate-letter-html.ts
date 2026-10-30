@@ -1,4 +1,5 @@
 import { SessionPayload } from "./types";
+import { withStandardizedSignature } from "./letter-signature";
 
 /**
  * Font/size combinations that look like a real person typed the letter.
@@ -34,8 +35,11 @@ function pickFont() {
  * look the same — even if the text happened to be similar.
  */
 export function generateLetterHtml(payload: SessionPayload): string {
-  const { generatedLetter, userInfo } = payload;
-  const letterText = generatedLetter.letterText;
+  const { userInfo } = payload;
+  const letterText = withStandardizedSignature(
+    payload.generatedLetter.letterText,
+    userInfo.fullName
+  );
   const font = pickFont();
 
   // Convert the plain-text letter into HTML paragraphs
@@ -47,13 +51,15 @@ export function generateLetterHtml(payload: SessionPayload): string {
       const escaped = line
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;");
+        .replace(/>/g, "&gt;")
+        .replace(/[\u0080-\uffff]/g, (c) => `&#${c.charCodeAt(0)};`);
       return `<p style="margin:0 0 2px 0;line-height:${font.lineHeight};">${escaped}</p>`;
     })
     .join("\n");
 
   return `<html>
 <head>
+<meta charset="UTF-8">
 <style>
   body {
     font-family: ${font.family};
@@ -65,18 +71,10 @@ export function generateLetterHtml(payload: SessionPayload): string {
   p {
     margin: 0 0 2px 0;
   }
-  .signature-line {
-    margin-top: 24px;
-    border-top: 1px solid #000;
-    width: 220px;
-    padding-top: 4px;
-  }
 </style>
 </head>
 <body>
 ${paragraphs}
-
-<div class="signature-line">${userInfo.fullName}</div>
 </body>
 </html>`;
 }

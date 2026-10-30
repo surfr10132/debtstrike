@@ -4,8 +4,6 @@ import { useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 
-const LOCALSTORAGE_KEY = "debtstrike_payload";
-
 function SuccessContent() {
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
@@ -20,17 +18,6 @@ function SuccessContent() {
     error?: string;
   } | null>(null);
 
-  // Try to get saved payload from localStorage
-  const getSavedPayload = useCallback(() => {
-    try {
-      const saved = localStorage.getItem(LOCALSTORAGE_KEY);
-      if (saved) return JSON.parse(saved);
-    } catch {
-      // ignore
-    }
-    return null;
-  }, []);
-
   useEffect(() => {
     const validateSession = async () => {
       if (!sessionId || !payloadId) {
@@ -38,103 +25,108 @@ function SuccessContent() {
         return;
       }
 
-      // For share_unlock with localStorage payload, skip server validation
-      if (sessionId === "share_unlock") {
-        const saved = getSavedPayload();
-        if (saved?.generatedLetter?.letterText) {
-          setSessionValid(true);
-          return;
-        }
-      }
 
       try {
         const response = await fetch(
           `/api/validate-session?payload_id=${payloadId}&session_id=${sessionId}`
         );
-        if (response.ok) {
-          setSessionValid(true);
-        } else {
-          // Last resort: check localStorage
-          const saved = getSavedPayload();
-          setSessionValid(!!saved?.generatedLetter?.letterText);
-        }
+        setSessionValid(response.ok);
       } catch (error) {
         console.error("Session validation error:", error);
-        const saved = getSavedPayload();
-        setSessionValid(!!saved?.generatedLetter?.letterText);
+        setSessionValid(false);
       }
     };
 
     validateSession();
-  }, [sessionId, payloadId, getSavedPayload]);
+  }, [sessionId, payloadId]);
 
-  // If this was a "mail for me" checkout, trigger the mailing
+  // If this was a "mail for me" checkout, poll webhook-driven mail status.
   useEffect(() => {
     if (!wasMailed || !sessionValid || !payloadId || !sessionId) return;
-    if (mailResult || mailLoading) return;
+    let isCancelled = false;
+    let pollTimer: ReturnType<typeof setInterval> | undefined;
 
-    const triggerMail = async () => {
-      setMailLoading(true);
+    const checkMailStatus = async () => {
       try {
-        const response = await fetch("/api/send-mail", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ payloadId, sessionId }),
-        });
+        const response = await fetch(
+          `/api/mail-status?payload_id=${payloadId}&session_id=${sessionId}`
+        );
         const data = await response.json();
-        if (response.ok && data.success) {
+        if (isCancelled) return true;
+
+        if (!response.ok) {
+          setMailLoading(true);
+          return false;
+        }
+
+        if (data.status === "submitted") {
           setMailResult({
             success: true,
             trackingNumber: data.trackingNumber,
           });
-        } else {
+          setMailLoading(false);
+          return true;
+        }
+
+        if (data.status === "failed") {
           setMailResult({
             success: false,
-            error: data.error || "Failed to send letter.",
+            error: data.error || "Failed to submit letter for mailing.",
           });
+          setMailLoading(false);
+          return true;
         }
-      } catch {
-        setMailResult({
-          success: false,
-          error: "Network error. Please contact support@debtstrike.io.",
-        });
-      } finally {
-        setMailLoading(false);
+
+        if (data.status === "not_applicable") {
+          setMailLoading(false);
+          return true;
+        }
+
+        if (data.status === "pending") {
+          setMailLoading(true);
+          return false;
+        }
+
+        setMailLoading(true);
+        return false;
+      } catch (error) {
+        if (!isCancelled) {
+          console.error("Mail status polling error:", error);
+          setMailLoading(true);
+        }
+        return false;
       }
     };
 
-    triggerMail();
-  }, [wasMailed, sessionValid, payloadId, sessionId, mailResult, mailLoading]);
+    const startPolling = async () => {
+      setMailLoading(true);
+      const complete = await checkMailStatus();
+      if (complete || isCancelled) return;
+      pollTimer = setInterval(async () => {
+        const done = await checkMailStatus();
+        if (done && pollTimer) {
+          clearInterval(pollTimer);
+          pollTimer = undefined;
+        }
+      }, 4000);
+    };
 
-  /**
-   * Download handler: tries POST with localStorage payload first,
-   * falls back to GET (which pulls from Stripe metadata or session store).
-   */
+    startPolling();
+
+    return () => {
+      isCancelled = true;
+      if (pollTimer) {
+        clearInterval(pollTimer);
+      }
+    };
+  }, [wasMailed, sessionValid, payloadId, sessionId]);
+
   const handleDownload = useCallback(async (format: "docx" | "pdf") => {
     setDownloading(format);
     try {
-      let response: Response | null = null;
-
-      // Try 1: POST with localStorage payload
-      const savedPayload = getSavedPayload();
-      if (savedPayload?.generatedLetter?.letterText) {
-        response = await fetch("/api/download", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            payload: savedPayload,
-            format,
-            sessionId,
-          }),
-        });
-      }
-
-      // Try 2: GET (Stripe metadata or session store)
-      if (!response || !response.ok) {
-        response = await fetch(
-          `/api/download?payload_id=${payloadId}&format=${format}&session_id=${sessionId}`
-        );
-      }
+      const response = await fetch(
+        `/api/download?payload_id=${payloadId}&format=${format}&session_id=${sessionId}`
+      );
 
       if (!response.ok) {
         const errData = await response.json().catch(() => ({}));
@@ -154,12 +146,12 @@ function SuccessContent() {
     } catch (err) {
       console.error("Download error:", err);
       alert(
-        "Download failed. Please try again or email support@debtstrike.io for help."
+        "Download failed. Please try again or email info@debtstrike.io for help."
       );
     } finally {
       setDownloading(null);
     }
-  }, [getSavedPayload, payloadId, sessionId]);
+  }, [payloadId, sessionId]);
 
   if (sessionValid === null) {
     return (
@@ -181,8 +173,8 @@ function SuccessContent() {
           </p>
           <p className="text-muted text-sm mb-6">
             If you already paid, email us at{" "}
-            <a href="mailto:support@debtstrike.io" className="text-accent underline">
-              support@debtstrike.io
+            <a href="mailto:info@debtstrike.io" className="text-accent underline">
+              info@debtstrike.io
             </a>{" "}
             with your payment confirmation and we&apos;ll send your letter directly.
           </p>
@@ -269,7 +261,7 @@ function SuccessContent() {
                   <div className="border-2 border-[var(--accent-green)] bg-[rgba(0,255,65,0.04)] p-4 rounded">
                     <p className="text-sm text-foreground leading-relaxed mb-2">
                       <strong>Save your tracking number.</strong> This is your proof that the collector received your letter.
-                      If they keep calling after delivery, that tracking number proves every call is a <span className="text-accent font-bold">$1,000 federal violation</span>.
+                      If they keep calling after delivery, that tracking number helps prove FDCPA violations and can support <span className="text-accent font-bold">up to $1,000 in statutory damages per case</span>.
                     </p>
                     <p className="text-sm text-accent font-mono font-bold">
                       Screenshot this page or write down the tracking number now.
@@ -286,8 +278,8 @@ function SuccessContent() {
                   <p className="text-sm text-muted mb-3">{mailResult.error}</p>
                   <p className="text-sm text-muted">
                     Don&apos;t worry — your payment is safe. Email{" "}
-                    <a href="mailto:support@debtstrike.io" className="text-accent underline">
-                      support@debtstrike.io
+                    <a href="mailto:info@debtstrike.io" className="text-accent underline">
+                      info@debtstrike.io
                     </a>{" "}
                     and we&apos;ll send your letter manually.
                   </p>
@@ -364,7 +356,7 @@ function SuccessContent() {
                         We&apos;re handling everything — your letter will be printed and sent via <strong>USPS Certified Mail with Electronic Return Receipt</strong>.
                       </p>
                       <p className="text-sm text-foreground leading-relaxed">
-                        <strong>Save your tracking number above.</strong> When the collector receives your letter, the tracking will update to &quot;Delivered.&quot; That&apos;s your proof. If they keep calling after that, every call is a <span className="text-accent font-bold">$1,000 federal violation</span>.
+                        <strong>Save your tracking number above.</strong> When the collector receives your letter, the tracking will update to &quot;Delivered.&quot; That&apos;s your proof. If they keep calling after that, continued calls may violate federal law and can support <span className="text-accent font-bold">up to $1,000 in statutory damages per case</span>.
                       </p>
                     </div>
                     <div className="text-xs text-muted">
@@ -382,8 +374,7 @@ function SuccessContent() {
                       </p>
                       <p className="text-sm text-foreground leading-relaxed mb-2">
                         <strong>Save the receipt with the tracking number.</strong> This is your proof.
-                        If they keep calling after receiving your letter, that tracking receipt is what proves
-                        every call is a $1,000 federal violation. Without it, you have no paper trail.
+                        If they keep calling after receiving your letter, that tracking receipt helps prove FDCPA violations and can support up to $1,000 in statutory damages per case. Without it, you have no paper trail.
                       </p>
                       <p className="text-sm text-accent font-mono font-bold">
                         No tracking receipt = no proof = no case. Keep it safe.
@@ -405,7 +396,7 @@ function SuccessContent() {
                 <div className="text-base font-bold text-foreground mb-1">All collection calls must stop</div>
                 <p className="text-sm text-muted leading-relaxed">
                   Once they receive your letter, they are legally required to stop calling you.
-                  Every call after that is a separate FDCPA violation worth <span className="text-accent font-bold">$1,000 in statutory damages</span>.
+                  Continued calls after that may violate federal law and can support <span className="text-accent font-bold">up to $1,000 in statutory damages per case</span>.
                 </p>
               </div>
             </div>

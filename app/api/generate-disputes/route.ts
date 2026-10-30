@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import anthropic from "@/lib/claude";
+import { getAnthropic } from "@/lib/claude";
 import { CreditReportItem, UserInfo, DisputeLetter } from "@/lib/types";
 import { sendLetterNotification } from "@/lib/emails";
 
@@ -263,7 +263,7 @@ The voice style and structural variation are your guide — follow them, but als
 
 Write the complete letter now.`;
 
-  const response = await anthropic.messages.create({
+  const response = await getAnthropic().messages.create({
     model: "claude-sonnet-4-5",
     max_tokens: 4000,
     system: systemPrompt,

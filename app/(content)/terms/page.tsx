@@ -112,7 +112,7 @@ export default function TermsOfService() {
         </p>
         <p className="text-foreground leading-relaxed">
           If you believe you have been charged in error, you may contact us at
-          support@debtstrike.io within seven (7) days of your transaction. We
+          info@debtstrike.io within seven (7) days of your transaction. We
           will investigate the matter, but no refund guarantee is provided.
         </p>
       </section>
@@ -292,7 +292,7 @@ export default function TermsOfService() {
         </p>
         <div className="bg-surface border border-border p-6 space-y-2">
           <p className="text-foreground font-mono">
-            <strong>Email:</strong> support@debtstrike.io
+            <strong>Email:</strong> info@debtstrike.io
           </p>
           <p className="text-muted text-sm">
             Please allow up to five (5) business days for a response.

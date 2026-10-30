@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { saveSession } from "@/lib/session-store";
 import { SessionPayload } from "@/lib/types";
-import anthropic from "@/lib/claude";
+import { getAnthropic } from "@/lib/claude";
+import {
+  finalizeClientDropboxFolder,
+  syncClientRecordToGoogleSheet,
+} from "@/lib/client-record-sync";
 import { writeFile } from "fs/promises";
 import path from "path";
 
@@ -10,6 +14,7 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const screenshot = formData.get("screenshot") as File | null;
     const payloadJson = formData.get("payload") as string | null;
+    const existingPayloadId = formData.get("payload_id");
 
     if (!screenshot || !payloadJson) {
       return NextResponse.json(
@@ -46,7 +51,7 @@ export async function POST(request: Request) {
     else if (screenshot.type === "image/gif") mediaType = "image/gif";
 
     // Use Claude vision to verify the screenshot
-    const verificationResponse = await anthropic.messages.create({
+    const verificationResponse = await getAnthropic().messages.create({
       model: "claude-sonnet-4-5",
       max_tokens: 300,
       messages: [
@@ -135,7 +140,22 @@ Be generous — if it looks like a genuine social media post that mentions DebtS
 
     // Parse and save the session payload
     const sessionPayload: SessionPayload = JSON.parse(payloadJson);
-    const payloadId = await saveSession(sessionPayload);
+    const payloadId = await saveSession(
+      sessionPayload,
+      typeof existingPayloadId === "string" && existingPayloadId.trim()
+        ? existingPayloadId
+        : undefined
+    );
+    const dropboxFolderPath = await finalizeClientDropboxFolder({
+      payloadId,
+      payload: sessionPayload,
+    });
+    await syncClientRecordToGoogleSheet(sessionPayload, {
+      payloadId,
+      orderType: "share_unlock",
+      mailingStatus: "share_unlocked",
+      dropboxFolderPath,
+    });
 
     // Log the share event
     console.log(

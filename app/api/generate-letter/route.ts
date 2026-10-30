@@ -1,8 +1,14 @@
 import { NextResponse } from 'next/server';
 import { getAnthropic } from '@/lib/claude';
 import { buildLetterGenerationPrompt } from '@/lib/claude-prompts';
-import { ExtractedDebtData, UserInfo } from '@/lib/types';
+import { ExtractedDebtData, SessionPayload, UserInfo } from '@/lib/types';
 import { sendLetterNotification } from '@/lib/emails';
+import { saveSession } from '@/lib/session-store';
+import { withStandardizedSignature } from '@/lib/letter-signature';
+import {
+  finalizeClientDropboxFolder,
+  syncClientRecordToGoogleSheet,
+} from '@/lib/client-record-sync';
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +26,7 @@ export async function POST(request: Request) {
     const { extractedData, userInfo } = body as {
       extractedData: ExtractedDebtData;
       userInfo: UserInfo;
+      existingPayloadId?: string;
     };
 
     // Validate required fields
@@ -91,6 +98,36 @@ export async function POST(request: Request) {
       );
     }
 
+    const generatedLetter = {
+      letterText: withStandardizedSignature(letterText, userInfo.fullName),
+      date: todayDate,
+    };
+    const sessionPayload: SessionPayload = {
+      extractedData,
+      userInfo,
+      generatedLetter,
+    };
+    const payloadId = await saveSession(
+      sessionPayload,
+      typeof body.existingPayloadId === 'string' ? body.existingPayloadId : undefined
+    );
+
+    if (
+      extractedData.uploadedDocumentStagingPath ||
+      extractedData.uploadedDocumentFileName
+    ) {
+      const dropboxFolderPath = await finalizeClientDropboxFolder({
+        payloadId,
+        payload: sessionPayload,
+      });
+      await syncClientRecordToGoogleSheet(sessionPayload, {
+        payloadId,
+        orderType: 'lead_capture',
+        mailingStatus: 'checkout_not_completed',
+        dropboxFolderPath,
+      });
+    }
+
     // Fire-and-forget notification — don't block the response
     sendLetterNotification({
       letterType: "Debt Strike",
@@ -100,8 +137,11 @@ export async function POST(request: Request) {
       collectorOrBureaus: extractedData.collectorName,
       timestamp: new Date().toLocaleString("en-US", { timeZone: "America/Los_Angeles" }),
     }).catch(() => {});
-
-    return NextResponse.json({ letterText, date: todayDate });
+    return NextResponse.json({
+      letterText: generatedLetter.letterText,
+      date: todayDate,
+      payloadId,
+    });
   } catch (error) {
     console.error('Letter generation error:', error);
     return NextResponse.json(

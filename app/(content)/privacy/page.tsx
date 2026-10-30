@@ -13,7 +13,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="text-base text-muted-foreground">
-            Last updated: March 14, 2026
+            Last updated: May 17, 2026
           </p>
         </div>
 
@@ -85,7 +85,7 @@ export default function PrivacyPage() {
               <li className="flex gap-3">
                 <span className="text-accent font-bold">•</span>
                 <span>
-                  Generating your personalized debt validation letter using Anthropic's API
+                  Generating your personalized debt validation letter using Anthropic&apos;s API
                 </span>
               </li>
               <li className="flex gap-3">
@@ -113,32 +113,38 @@ export default function PrivacyPage() {
             </h2>
             <div className="bg-muted p-4 rounded-lg border border-accent/20 mb-4">
               <p className="text-base text-foreground font-mono">
-                <span className="text-accent">→</span> All personal data is stored in <span className="font-bold">server memory only</span>
+                <span className="text-accent">→</span> Personal data is stored in <span className="font-bold">short-lived server-side storage only</span>
               </p>
             </div>
             <ul className="space-y-3 ml-6 text-base text-foreground">
               <li className="flex gap-3">
                 <span className="text-accent font-bold">•</span>
                 <span>
-                  Data is held temporarily for <strong>2 hours maximum</strong> to allow document generation and download
+                  Letter-generation session payloads are retained for up to <strong>2 hours</strong> to support generation, checkout, and download
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="text-accent font-bold">•</span>
                 <span>
-                  <strong>No persistent database:</strong> Your information is not stored in any database
+                  For paid mail orders, we retain a limited fulfillment record (order type, mailing status, tracking number, timestamps, and errors) for up to <strong>30 days</strong> to prevent duplicate sends and provide support
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="text-accent font-bold">•</span>
                 <span>
-                  After the 2-hour window, all personal data is automatically deleted from memory
+                  We do <strong>not</strong> store full letter payloads in browser localStorage and do <strong>not</strong> place full personal payloads in Stripe metadata
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="text-accent font-bold">•</span>
                 <span>
-                  You can request immediate deletion by contacting support@debtstrike.io
+                  DebtStrike does not require user accounts and does not maintain long-term customer profile records
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-accent font-bold">•</span>
+                <span>
+                  You can request immediate deletion by contacting info@debtstrike.io
                 </span>
               </li>
             </ul>
@@ -177,7 +183,7 @@ export default function PrivacyPage() {
                 Anthropic API (Letter Generation)
               </h3>
               <p className="text-base leading-relaxed text-foreground">
-                We use Anthropic's API to generate your personalized debt validation letter. Your debt collection letter content is processed by Anthropic to generate the response. This processing is subject to Anthropic's privacy practices.{' '}
+                We use Anthropic&apos;s API to generate your personalized debt validation letter. Your debt collection letter content is processed by Anthropic to generate the response. This processing is subject to Anthropic&apos;s privacy practices.{` `}
                 <a
                   href="https://www.anthropic.com/privacy"
                   target="_blank"
@@ -297,17 +303,17 @@ export default function PrivacyPage() {
               </li>
             </ul>
             <p className="text-base leading-relaxed text-foreground mt-4">
-              To exercise these rights, contact us at <span className="font-mono text-accent">support@debtstrike.io</span>
+              To exercise these rights, contact us at <span className="font-mono text-accent">info@debtstrike.io</span>
             </p>
           </section>
 
           {/* 8. Children's Privacy */}
           <section>
             <h2 className="font-mono text-2xl font-bold mb-4 text-accent">
-              8. Children's Privacy
+              8. Children&apos;s Privacy
             </h2>
             <p className="text-base leading-relaxed text-foreground">
-              DebtStrike is not intended for users under 18 years of age. We do not knowingly collect personal information from children under 18. If we become aware that a child under 18 has provided us with personal information, we will delete such information and terminate the child's use of DebtStrike.
+              DebtStrike is not intended for users under 18 years of age. We do not knowingly collect personal information from children under 18. If we become aware that a child under 18 has provided us with personal information, we will delete such information and terminate the child&apos;s use of DebtStrike.
             </p>
           </section>
 
@@ -329,13 +335,19 @@ export default function PrivacyPage() {
               <li className="flex gap-3">
                 <span className="text-accent font-bold">•</span>
                 <span>
-                  In-memory storage only (no persistent databases vulnerable to breach)
+                  Short-lived server-side session storage with automatic expiry for letter payloads (2-hour retention)
                 </span>
               </li>
               <li className="flex gap-3">
                 <span className="text-accent font-bold">•</span>
                 <span>
-                  Automatic deletion after 2 hours
+                  Limited operational fulfillment records retained up to 30 days for mailing reliability and support
+                </span>
+              </li>
+              <li className="flex gap-3">
+                <span className="text-accent font-bold">•</span>
+                <span>
+                  No full personal payload storage in browser localStorage or Stripe metadata
                 </span>
               </li>
               <li className="flex gap-3">
@@ -353,7 +365,7 @@ export default function PrivacyPage() {
               10. Changes to This Privacy Policy
             </h2>
             <p className="text-base leading-relaxed text-foreground">
-              We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated "Last updated" date. Your continued use of DebtStrike after changes constitutes acceptance of the updated Privacy Policy.
+              We may update this Privacy Policy from time to time. Changes will be posted on this page with an updated &quot;Last updated&quot; date. Your continued use of DebtStrike after changes constitutes acceptance of the updated Privacy Policy.
             </p>
           </section>
 
@@ -367,7 +379,7 @@ export default function PrivacyPage() {
             </p>
             <div className="bg-muted p-4 rounded-lg border border-accent/20">
               <p className="text-base text-foreground font-mono">
-                <span className="text-accent">support@debtstrike.io</span>
+                <span className="text-accent">info@debtstrike.io</span>
               </p>
               <p className="text-sm text-muted-foreground mt-2">
                 We will respond to privacy requests within 30 days.

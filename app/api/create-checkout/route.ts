@@ -1,21 +1,37 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { saveSession } from '@/lib/session-store';
 import { SessionPayload } from '@/lib/types';
-import { encodePayloadToMetadata } from '@/lib/stripe-payload';
+import { syncClientRecordToGoogleSheet } from '@/lib/client-record-sync';
 
 const TEST_MODE = process.env.DEBTSTRIKE_TEST_MODE === 'true' || process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_your') || !process.env.STRIPE_SECRET_KEY;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export async function POST(request: Request) {
   try {
-    const { sessionPayload, mailForMe, shareUnlocked } = (await request.json()) as {
+    const { sessionPayload, mailForMe, shareUnlocked, existingPayloadId } = (await request.json()) as {
       sessionPayload: SessionPayload;
       mailForMe?: boolean;
       shareUnlocked?: boolean;
+      existingPayloadId?: string;
     };
+    const customerEmail = sessionPayload?.userInfo?.email?.trim();
+
+    if (!customerEmail || !EMAIL_REGEX.test(customerEmail)) {
+      return NextResponse.json(
+        { error: 'A valid email address is required.' },
+        { status: 400 }
+      );
+    }
 
     // Store the payload server-side and get a UUID
-    const payloadId = await saveSession(sessionPayload);
+    const payloadId = await saveSession(
+      sessionPayload,
+      typeof existingPayloadId === 'string' ? existingPayloadId : undefined
+    );
+    const orderType = mailForMe
+      ? (shareUnlocked ? 'share_mail' : 'debt_letter_mail')
+      : 'debt_letter';
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
     if (!baseUrl) {
@@ -28,6 +44,12 @@ export async function POST(request: Request) {
     // TEST MODE: Skip Stripe and go straight to success page
     if (TEST_MODE) {
       console.log('[TEST MODE] Skipping Stripe checkout, redirecting to success page');
+      await syncClientRecordToGoogleSheet(sessionPayload, {
+        payloadId,
+        stripeSessionId: 'test_session_bypass',
+        orderType,
+        mailingStatus: mailForMe ? 'pending' : 'checkout_started',
+      });
       const successUrl = `${baseUrl}/success?session_id=test_session_bypass&payload_id=${payloadId}${mailForMe ? '&mailed=1' : ''}`;
       return NextResponse.json({ url: successUrl });
     }
@@ -73,18 +95,11 @@ export async function POST(request: Request) {
       });
     }
 
-    // Determine order type for webhook processing
-    const orderType = mailForMe
-      ? (shareUnlocked ? 'share_mail' : 'debt_letter_mail')
-      : 'debt_letter';
 
-    // Encode full payload into Stripe metadata so it survives across
-    // serverless invocations (the in-memory session store does NOT persist on Vercel)
-    const payloadChunks = encodePayloadToMetadata(sessionPayload);
-
-    const session = await stripe.checkout.sessions.create({
+    const session = await getStripe().checkout.sessions.create({
       mode: 'payment',
       payment_method_types: ['card'],
+      customer_email: customerEmail,
       line_items: lineItems,
       success_url: `${baseUrl}/success?session_id={CHECKOUT_SESSION_ID}&payload_id=${payloadId}${mailForMe ? '&mailed=1' : ''}`,
       cancel_url: `${baseUrl}/generate`,
@@ -93,8 +108,13 @@ export async function POST(request: Request) {
         payload_id: payloadId,
         mail_for_me: mailForMe ? 'true' : 'false',
         share_unlocked: shareUnlocked ? 'true' : 'false',
-        ...payloadChunks,
       },
+    });
+    await syncClientRecordToGoogleSheet(sessionPayload, {
+      payloadId,
+      stripeSessionId: session.id,
+      orderType,
+      mailingStatus: mailForMe ? 'pending' : 'checkout_started',
     });
 
     return NextResponse.json({ url: session.url });

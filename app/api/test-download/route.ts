@@ -45,6 +45,7 @@ export async function POST(request: Request) {
         city: 'Los Angeles',
         state: 'CA',
         zip: '90001',
+        email: 'john@example.com',
         phone: '(310) 555-1234',
         ssnLast4: '5678',
         dob: '1985-03-15',

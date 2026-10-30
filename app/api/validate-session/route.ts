@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
+import { getStripe } from '@/lib/stripe';
 import { getSession } from '@/lib/session-store';
-import { decodePayloadFromMetadata } from '@/lib/stripe-payload';
 
 const TEST_MODE = process.env.STRIPE_SECRET_KEY?.startsWith('sk_test_your') || !process.env.STRIPE_SECRET_KEY;
 
@@ -23,30 +22,34 @@ export async function GET(request: Request) {
       return NextResponse.json({ valid: true });
     }
 
-    // Share unlock — trust it (the share-upload endpoint already validated)
+    // Share unlock — require corresponding server-side session payload
     if (sessionId === 'share_unlock') {
-      return NextResponse.json({ valid: true });
+      const shareSession = await getSession(payloadId);
+      if (shareSession?.generatedLetter?.letterText) {
+        return NextResponse.json({ valid: true });
+      }
+      return NextResponse.json(
+        { error: 'Session not found or expired' },
+        { status: 404 }
+      );
     }
 
-    // For Stripe sessions: verify payment AND that payload exists in metadata
+    // For Stripe sessions: verify payment status first
     try {
-      const checkoutSession = await stripe.checkout.sessions.retrieve(sessionId);
-      if (checkoutSession.payment_status === 'paid') {
-        // Check if payload is in Stripe metadata
-        const payload = decodePayloadFromMetadata(
-          checkoutSession.metadata as Record<string, string>
+      const checkoutSession = await getStripe().checkout.sessions.retrieve(sessionId);
+      if (checkoutSession.payment_status !== 'paid') {
+        return NextResponse.json(
+          { error: 'Payment not confirmed' },
+          { status: 403 }
         );
-        if (payload?.generatedLetter?.letterText) {
-          return NextResponse.json({ valid: true });
-        }
       }
     } catch (err) {
       console.warn('[validate-session] Stripe check failed:', err);
     }
-
+    // Require server-side session payload
     // Fall back to session store (local dev)
     const session = await getSession(payloadId);
-    if (session) {
+    if (session?.generatedLetter?.letterText) {
       return NextResponse.json({ valid: true });
     }
 

@@ -6,6 +6,8 @@ export interface ExtractedDebtData {
   accountNumber: string;
   amountClaimed: string;
   originalCreditor: string;
+  uploadedDocumentStagingPath?: string;
+  uploadedDocumentFileName?: string;
   isThirdPartyCollector: boolean;
   collectorTypeConfidence: "high" | "medium" | "low";
   recipientName: string;
@@ -22,6 +24,7 @@ export interface UserInfo {
   city: string;
   state: string;
   zip: string;
+  email: string;
   phone: string;
   ssnLast4: string;
   dob: string;
@@ -74,4 +77,30 @@ export interface CreditRepairSession {
   userInfo: UserInfo;
   analysis: CreditReportAnalysis;
   disputeLetters: DisputeLetter[];
+}
+
+// ── Debt Collector Response Analysis (Phase 2) ──
+
+export type CollectorResponseDetermination = "proper" | "partial" | "improper";
+export type AnalysisConfidence = "high" | "medium" | "low";
+export type AnalysisSeverity = "low" | "medium" | "high";
+
+export interface FdcpaIssueFinding {
+  title: string;
+  severity: AnalysisSeverity;
+  lawReference: string;
+  evidence: string;
+  explanation: string;
+}
+
+export interface CollectorResponseAnalysisResult {
+  determination: CollectorResponseDetermination;
+  confidence: AnalysisConfidence;
+  summary: string;
+  isProperResponse: boolean;
+  fdcpaIssues: FdcpaIssueFinding[];
+  recommendedNextSteps: string[];
+  groundsForLawsuit: boolean;
+  lawsuitReasoning: string;
+  responseLetter: string;
 }

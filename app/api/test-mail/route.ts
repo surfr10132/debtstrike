@@ -14,6 +14,16 @@ import { SessionPayload } from "@/lib/types";
  * DELETE THIS ROUTE BEFORE GOING LIVE.
  */
 export async function GET() {
+  const testEndpointsEnabled =
+    process.env.NODE_ENV !== "production" ||
+    process.env.DEBTSTRIKE_ENABLE_TEST_ENDPOINTS === "true";
+
+  if (!testEndpointsEnabled) {
+    return NextResponse.json(
+      { error: "Test endpoint is disabled in production." },
+      { status: 403 }
+    );
+  }
   try {
     // Create a test payload
     const testPayload: SessionPayload = {
@@ -38,6 +48,7 @@ export async function GET() {
         city: "Los Angeles",
         state: "CA",
         zip: "90001",
+        email: "john@example.com",
         phone: "(555) 123-4567",
         ssnLast4: "1234",
         dob: "1990-01-15",

@@ -73,7 +73,7 @@ export default function RefundPolicyPage() {
                 <strong>Timeline:</strong> Refund requests must be submitted within 48 hours of purchase.
               </p>
               <p>
-                <strong>Process:</strong> Email <span className="font-mono text-orange-400">support@debtstrike.io</span> with your order details and description of the technical issue.
+                <strong>Process:</strong> Email <span className="font-mono text-orange-400">info@debtstrike.io</span> with your order details and description of the technical issue.
               </p>
               <p className="text-sm text-slate-400 mt-4">
                 We'll review your request and process approved refunds within 5 business days.
@@ -83,7 +83,7 @@ export default function RefundPolicyPage() {
 
           {/* Footer Note */}
           <p className="text-slate-400 text-sm italic pt-4">
-            Questions? Contact support@debtstrike.io
+            Questions? Contact info@debtstrike.io
           </p>
         </div>
       </div>

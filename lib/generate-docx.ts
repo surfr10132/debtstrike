@@ -3,14 +3,16 @@ import {
   Packer,
   Paragraph,
   TextRun,
-  AlignmentType,
-  HeadingLevel,
 } from "docx";
 import { SessionPayload } from "./types";
+import { withStandardizedSignature } from "./letter-signature";
 
 export async function generateDocx(payload: SessionPayload): Promise<Buffer> {
-  const { generatedLetter } = payload;
-  const lines = generatedLetter.letterText.split("\n");
+  const normalizedLetterText = withStandardizedSignature(
+    payload.generatedLetter.letterText,
+    payload.userInfo.fullName
+  );
+  const lines = normalizedLetterText.split("\n");
 
   const children: Paragraph[] = [];
 
@@ -61,29 +63,6 @@ export async function generateDocx(payload: SessionPayload): Promise<Buffer> {
     );
   }
 
-  // Signature area
-  children.push(
-    new Paragraph({ children: [new TextRun({ text: "", size: 24 })] }),
-    new Paragraph({ children: [new TextRun({ text: "", size: 24 })] }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: "_________________________________",
-          size: 24,
-          font: "Times New Roman",
-        }),
-      ],
-    }),
-    new Paragraph({
-      children: [
-        new TextRun({
-          text: payload.userInfo.fullName,
-          size: 24,
-          font: "Times New Roman",
-        }),
-      ],
-    })
-  );
 
   const doc = new Document({
     sections: [

@@ -61,6 +61,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
         {children}
+        <div className="relative z-10 border-t border-border px-4 py-6 text-center font-mono text-sm text-muted">
+          Customer service:{" "}
+          <a
+            href="mailto:info@debtstrike.io"
+            className="text-accent hover:underline"
+          >
+            info@debtstrike.io
+          </a>
+        </div>
         <Analytics />
       </body>
     </html>
