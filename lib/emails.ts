@@ -8,7 +8,7 @@ const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL || "jason@robenzlaw.co
 
 function checkEmail() {
   if (!isEmailConfigured) {
-    console.warn("[EMAIL] Resend API key not configured — skipping email send");
+    console.warn("[EMAIL] Resend API key not configured ‚Äî skipping email send");
     return false;
   }
   return true;
@@ -39,7 +39,7 @@ export async function sendDownloadEmail(
   await resend.emails.send({
     from: FROM_EMAIL,
     to: customerEmail,
-    subject: `Your letter to ${extractedData.collectorName} is ready — here's your next move`,
+    subject: `Your letter to ${extractedData.collectorName} is ready ‚Äî here's your next move`,
     html: `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; color: #e0e0e0; background: #0a0a0a; padding: 32px;">
 
@@ -49,7 +49,7 @@ export async function sendDownloadEmail(
 
   <div style="border: 1px solid #222; padding: 24px; margin-bottom: 24px;">
     <p style="margin: 0 0 16px; font-size: 15px;">Hi ${userInfo.fullName},</p>
-    <p style="margin: 0 0 16px; font-size: 15px;">Your debt validation and cease &amp; desist letter is attached. You've got two copies — a Word doc you can edit and sign by hand, and a PDF with a signature already on it. Either one works.</p>
+    <p style="margin: 0 0 16px; font-size: 15px;">Your debt validation and cease &amp; desist letter is attached. You've got two copies ‚Äî a Word doc you can edit and sign by hand, and a PDF with a signature already on it. Either one works.</p>
     <p style="margin: 0 0 8px; font-size: 15px;"><strong>Collector:</strong> ${extractedData.collectorName}</p>
     <p style="margin: 0 0 8px; font-size: 15px;"><strong>Account:</strong> ${extractedData.accountNumber || "As referenced"}</p>
     <p style="margin: 0 0 16px; font-size: 15px;"><strong>Amount claimed:</strong> ${extractedData.amountClaimed || "As stated"}</p>
@@ -57,7 +57,7 @@ export async function sendDownloadEmail(
 
   <!-- TIME-SENSITIVE: Mail it NOW -->
   <div style="border: 2px solid #ff3333; padding: 24px; margin-bottom: 24px; background: rgba(255,51,51,0.05);">
-    <div style="font-family: monospace; font-size: 12px; color: #ff3333; letter-spacing: 2px; font-weight: bold; margin-bottom: 12px;">⚠ DON'T SIT ON THIS</div>
+    <div style="font-family: monospace; font-size: 12px; color: #ff3333; letter-spacing: 2px; font-weight: bold; margin-bottom: 12px;">‚ö† DON'T SIT ON THIS</div>
     <p style="margin: 0 0 12px; font-size: 15px; color: #ffffff;">Under the FDCPA, you have <strong>30 days from when you received the collector's letter</strong> to dispute the debt in writing. If you wait too long, the collector can assume the debt is valid and keep coming after you.</p>
     <p style="margin: 0 0 12px; font-size: 15px; font-weight: bold; color: #ffffff;">Mail this letter THIS WEEK. Here's how:</p>
     <ol style="margin: 0 0 16px; padding-left: 20px; font-size: 14px; line-height: 1.8;">
@@ -65,7 +65,7 @@ export async function sendDownloadEmail(
       <li>Sign it if using the Word version</li>
       <li>Go to any USPS post office</li>
       <li>Ask for <strong>"Certified Mail with Return Receipt"</strong> (~$4-5)</li>
-      <li><strong>KEEP THE RECEIPT — that's your proof</strong></li>
+      <li><strong>KEEP THE RECEIPT ‚Äî that's your proof</strong></li>
     </ol>
     <div style="border: 2px solid #00ff41; padding: 16px; background: rgba(0,255,65,0.04);">
       <p style="margin: 0; font-size: 14px; color: #ffffff;"><strong>Why certified mail?</strong> Once the collector receives this letter, continued calls may violate federal law and can support <span style="color: #00ff41; font-weight: bold;">up to $1,000 in statutory damages per case</span>. The tracking receipt is your proof they got it. No receipt = no proof = no case.</p>
@@ -75,8 +75,8 @@ export async function sendDownloadEmail(
   <!-- UPSELL: We'll mail it for you -->
   <div style="border: 2px solid #00ff41; padding: 24px; margin-bottom: 24px; background: rgba(0,255,65,0.04); text-align: center;">
     <div style="font-family: monospace; font-size: 12px; color: #00ff41; letter-spacing: 2px; font-weight: bold; margin-bottom: 12px;">DON'T WANT TO GO TO THE POST OFFICE?</div>
-    <p style="margin: 0 0 16px; font-size: 15px;">We'll print your letter and mail it via <strong>USPS Certified Mail with Return Receipt</strong> — tracking number sent straight to your inbox. No trip to the post office.</p>
-    <a href="${baseUrl}/generate" style="display: inline-block; padding: 14px 32px; background: #00ff41; color: #000; font-family: monospace; font-size: 14px; font-weight: bold; text-decoration: none; letter-spacing: 2px;">MAIL IT FOR ME — $10.99</a>
+    <p style="margin: 0 0 16px; font-size: 15px;">We'll print your letter and mail it via <strong>USPS Certified Mail with Return Receipt</strong> ‚Äî tracking number sent straight to your inbox. No trip to the post office.</p>
+    <a href="${baseUrl}/generate" style="display: inline-block; padding: 14px 32px; background: #00ff41; color: #000; font-family: monospace; font-size: 14px; font-weight: bold; text-decoration: none; letter-spacing: 2px;">MAIL IT FOR ME ‚Äî $10.99</a>
     <p style="margin: 12px 0 0; font-size: 12px; color: #666;">Includes printing, USPS Certified Mail, electronic return receipt, and tracking.</p>
   </div>
 
@@ -86,10 +86,10 @@ export async function sendDownloadEmail(
       <strong style="color: #00ff41;">Immediately after delivery</strong> — All phone calls from the collector must stop. If they call anyway, write down the date, time, and number. Continued calls may violate federal law and can support up to $1,000 in statutory damages per case.
     </div>
     <div style="margin-bottom: 12px; font-size: 14px;">
-      <strong style="color: #00ff41;">Within 30 days</strong> — They must send you proof the debt is real. If they can't, they have to stop collecting and remove it from your credit report.
+      <strong style="color: #00ff41;">Within 30 days</strong> ‚Äî They must send you proof the debt is real. If they can't, they have to stop collecting and remove it from your credit report.
     </div>
     <div style="font-size: 14px;">
-      <strong style="color: #00ff41;">After 30 days with no response</strong> — The debt is effectively dead. If they keep contacting you, a consumer protection attorney can sue them for you — most take these cases for free on contingency.
+      <strong style="color: #00ff41;">After 30 days with no response</strong> ‚Äî The debt is effectively dead. If they keep contacting you, a consumer protection attorney can sue them for you ‚Äî most take these cases for free on contingency.
     </div>
   </div>
 
